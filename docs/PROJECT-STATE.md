@@ -197,10 +197,16 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-The corrected date, time, and Cardiff time zone survived a normal power cycle
-on 2026-08-23. Run the bounded native-only core application pass documented in
-[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md), including exact cleanup of
-its disposable alarm, calendar entry, and note.
+The offline native launch pass completed on 2026-08-23 without an observed
+application crash. Clock, Calendar, Notes, Calculator, Dictionary, Files, ZIP,
+Adobe Reader, Microsoft Apps, and User guide reached their native interfaces;
+Files and ZIP browsed Mass memory, and User guide displayed its offline index.
+Microsoft Apps led to an account-dependent Office communications setup screen,
+not a local document browser.
+
+Build and deploy a controlled, hash-recorded PDF/ZIP/text/Office test pack over
+the proven MTP path. Use it to test native local-content handling without an
+account or historical service endpoint.
 
 
 

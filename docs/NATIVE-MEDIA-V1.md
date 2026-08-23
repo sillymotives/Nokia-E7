@@ -2,6 +2,29 @@
 
 Prepared: 2026-08-23
 
+## Handset result
+
+The user completed the on-device sequence on 2026-08-23.
+
+- The baseline JPEG displays correctly.
+- Both MP3 files play, including the useful player controls exercised during
+  the test.
+- The imported H.264/AAC MP4 plays correctly.
+- Music player indexed the tracks but displayed their filenames rather than
+  the embedded title, artist, and album tags. Files could see the metadata,
+  so the tags survived transfer.
+- `KAI-PLAYLIST.M3U` opened in Files but did not appear as a Music player
+  playlist.
+- The video player did not autorotate its playback surface. System
+  autorotation works elsewhere, so this is recorded as a player-specific UI
+  limitation rather than a sensor or handset-orientation failure.
+
+The transfer method explains the two music-library limitations. v1 used
+libmtp's generic `mtp-sendfile`, which creates a file object but does not
+populate MTP track properties or create a playlist object. The follow-up
+[`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md) reuses the byte-identical MP3 files
+through the track-aware MTP path and creates a native playlist object.
+
 ## Purpose
 
 Test the E7's imported-media and Music-player paths without confusing a codec
@@ -62,4 +85,3 @@ Wi-Fi may remain disconnected. No step requires an account or service.
 Do not choose an online update, add an account, install a codec, or alter
 pre-existing media. A direct user report or a readable video is sufficient
 evidence. HDMI remains a separate hardware-dependent test.
-

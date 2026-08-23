@@ -57,10 +57,12 @@ on the handset, establishing Files, Adobe Reader, and ZIP manager as useful
 native local-content paths. The core alarm, calendar, notes, calculator,
 dictionary, and offline User guide transactions also pass. Native capture and
 media also pass end-to-end: stills, Gallery, photo editing, video
-capture/playback/editing, and voice recording/playback. Imported media, Music
-player behaviour, FM radio, and physical output are the current restoration
-gate. FM radio now passes; HDMI is deferred for lack of a mini-HDMI cable, while
-imported media and Music-player behaviour remain active tests.
+capture/playback/editing, and voice recording/playback. Imported JPEG, MP3, and
+H.264/AAC playback pass, as does FM radio. HDMI is deferred for lack of a
+mini-HDMI cable. Generic MTP file transfer exposed a Music-player ingestion
+limit—filenames instead of tags and no native playlist—so a track-aware MTP
+metadata/playlist probe is the active restoration gate. The video player also
+has a local no-autorotation quirk despite healthy system rotation elsewhere.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -78,6 +80,8 @@ The guarded local-content deployment and on-device pass conditions are recorded
 in [`docs/NATIVE-CONTENT-V1.md`](docs/NATIVE-CONTENT-V1.md).
 The imported JPEG/MP3/M3U/MP4 compatibility pack and Music-player test sequence
 are recorded in [`docs/NATIVE-MEDIA-V1.md`](docs/NATIVE-MEDIA-V1.md).
+The track-aware MTP metadata and native-playlist follow-up is recorded in
+[`docs/NATIVE-MUSIC-V2.md`](docs/NATIVE-MUSIC-V2.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

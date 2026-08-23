@@ -47,8 +47,8 @@ guide is not proof of the installed state or behaviour of firmware
 | Camera, Photos, image editor, video editor | Retain | Still and video capture, Gallery display, native playback, photo editing, and video editing all work by direct user observation. Autofocus/flash modes, geotagging choices, and export remain later detail tests. |
 | Recorder | Retain | Native audio recording and playback work by direct user observation. Format/export limits remain later tests. |
 | FM radio | Retain | The user confirms that native FM reception works. Station memory and RDS are optional later detail tests. |
-| Music player and playlists | Retain / Repair | MTP transport formats are known; imported playback, library refresh, playlists/tags, repeat/shuffle, and background playback remain unproved. |
-| Video player and Web TV | Retain / Prune | Handset-captured local video playback works. Imported codec limits remain unproved; legacy Web TV catalogues are likely prune candidates. |
+| Music player and playlists | Retain / Repair | Imported MP3 playback and the exercised player controls work. Generic MTP file transfer preserved embedded ID3 tags but Music player showed filenames, and a copied M3U did not register as a playlist. Track-aware MTP metadata and a native playlist object are the active repair test. |
+| Video player and Web TV | Retain / Prune | Handset-captured and imported H.264/AAC video playback work. The player does not autorotate even though system rotation works elsewhere; treat that as a local player limitation. Legacy Web TV catalogues are likely prune candidates. |
 | HDMI/TV output | Blocked: test hardware | No suitable mini-HDMI cable is available. There is no failure evidence; defer physical verification rather than inferring a pass. |
 | Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Preserve native Maps if GPS and offline map data work. Online search, traffic, and account functions may need offline data or a bridge. |
 | Wi-Fi and browser | Retain / Bridge | Local HTTP, CSS, JavaScript, XHR, and storage are proven. Use the browser as infrastructure only where no meaningful native client exists. |
@@ -130,18 +130,29 @@ The user reports that FM radio works. HDMI/TV output is untested because no
 suitable mini-HDMI cable is available. This is a test-hardware blocker, not a
 device failure and not evidence of a pass.
 
-## Active gate: imported media and Music player
+## Completed gate: imported media compatibility v1
 
-Imported native-media probe v1 is built and host-verified with baseline JPEG,
-two tagged CBR MP3 tracks, extended M3U, and H.264 Constrained-Baseline/AAC-LC
-MP4 fixtures. Its guarded MTP deployment verifies every source hash, retrieves
-every created object, and compares every retrieval byte-for-byte. Deploy and
-test it according to [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md).
+Imported native-media probe v1 passed its image, audio, and video decoding
+tests. Music player found and played both MP3s, and the useful player controls
+exercised during the test worked. The imported H.264/AAC video also played.
 
-Verify Music player library refresh, metadata, playlists, repeat/shuffle, and
-background playback, plus Gallery indexing and imported image/video playback.
-HDMI/TV output remains deferred until an appropriate cable and display are
-available.
+Two ingestion details were partial: Music player displayed filenames instead
+of the surviving embedded tags, and the copied M3U opened as a file but did not
+become a native playlist. The video player's playback surface also did not
+autorotate, while system rotation works elsewhere. Full observations and the
+bounded interpretation are in [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md).
+
+## Active gate: track-aware music ingestion v2
+
+The v1 audio bytes are known-good. The next probe therefore changes only the
+host transfer semantics: `mtp-sendtr` supplies title, artist, album, track
+number, and duration as MTP object properties, and `mtp-newplaylist` creates a
+real playlist object referencing the returned track IDs. See
+[`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md).
+
+This is the decisive test for whether the stock Music player consumes the
+metadata model that the E7 advertises over MTP. It does not install software,
+alter codecs, or touch pre-existing media.
 
 This gate permits adding and removing clearly named test media in ordinary user
 storage. It does not permit deleting pre-existing media, installing codecs,

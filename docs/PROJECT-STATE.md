@@ -184,16 +184,14 @@ private.
 ## Historical toolkit evidence
 
 An earlier toolkit supplied on 2026-08-23 identifies the tested phone as
-RM-626 running firmware `111.040.1511`. Its preservation receipt records an
-original mass-memory image of exactly `16,076,767,232` bytes with SHA-256:
+RM-626 running firmware `111.040.1511`. Its receipt records a complete
+mass-memory preservation image. The private image location and checksum are
+deliberately excluded from this public repository.
 
-`b5dd4b7e07afec8e0648ad40dfef37ef78a4e7b37d05382e5a4818728a071dfa`
-
-The user confirms that this preservation image is stored on the Acer, not on
-the current `niggacentre` host. Its present integrity has therefore not been
-freshly verified in this project. That does not block read-only interface
-enumeration, but the image must be retrieved and verified—or a new preservation
-image made—before any destructive phone operation is considered.
+Its present integrity has not been freshly verified in this project. That does
+not block read-only interface enumeration, but the private image must be
+retrieved and verified—or a new preservation image made—before any destructive
+phone operation is considered.
 
 ## Active gate
 
@@ -228,15 +226,28 @@ FM radio passes by direct user observation. HDMI/TV output is untested because
 no suitable mini-HDMI cable is available; this is a hardware blocker, not a
 failure and not evidence of a pass.
 
-Imported native-media probe v1 is built and host-verified. It contains a
-baseline JPEG, two tagged 44.1 kHz stereo 128 kb/s CBR MP3 tracks, an extended
-M3U playlist, and a 640x360 H.264 Constrained-Baseline/AAC-LC MP4. Every stream
-fully decodes on the host, and the visual fixtures have been inspected.
+Imported native-media probe v1 passed on the handset for JPEG display, MP3
+playback and the exercised Music-player controls, and H.264/AAC MP4 playback.
+Music player indexed the two tracks but displayed filenames instead of the
+embedded title/artist/album tags. The copied M3U opened in Files but did not
+register as a native playlist. Files could see the surviving metadata.
 
-Its guarded MTP deployment passed clean-transfer, existing-folder refusal, and
-tampered-payload refusal simulations. The active device gate is the on-device
-sequence in [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md): Gallery, Music player
-metadata/library/playlist/background behaviour, and imported video playback.
+The stock video player did not autorotate its playback surface. Autorotation
+works elsewhere on the handset, so this is a player-specific limitation rather
+than evidence of a failed orientation sensor.
+
+The E7's MTP responder advertises get/set track properties including artist,
+track number, genre, album name, album artist, duration, release date, and
+composer, plus native audio-album and audio/video-playlist object formats.
+libmtp's generic `mtp-sendfile` path used by v1 creates only a file object;
+libmtp's track-aware path explicitly supplies those properties and can create
+native album and playlist objects.
+
+The active gate is therefore the bounded track-aware deployment in
+[`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md). It reuses the byte-identical,
+known-good MP3 fixtures, writes explicit MTP track metadata, creates one native
+playlist object, and verifies the resulting host-visible MTP model before any
+Music-player judgement is made.
 
 
 

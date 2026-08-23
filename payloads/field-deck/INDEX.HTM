@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>KAI E7 Field Deck</title>
+  <style type="text/css">
+    html,body{margin:0;padding:0;background:#071018;color:#d7f7ff;font-family:Arial,sans-serif;font-size:14px;}
+    a{color:#6fffe9;}#top{height:45px;padding:7px 12px;background:#102432;border-bottom:2px solid #4ad7e8;}
+    #mark{float:left;color:#ff86cf;font-weight:bold;letter-spacing:3px;font-size:15px;}
+    #clock{float:right;color:#6fffe9;text-align:right;font-size:18px;line-height:18px;}
+    #date{font-size:11px;color:#9bbbc5;}#main{padding:9px 10px;}#left{float:left;width:57%;}#right{float:right;width:40%;}
+    .panel{background:#102432;border:1px solid #28556a;margin-bottom:8px;padding:8px;}
+    h1{font-size:17px;color:#6fffe9;margin:0 0 6px 0;}h2{font-size:14px;color:#ffd166;margin:0 0 5px 0;}
+    p{margin:4px 0;line-height:1.3;}textarea,input{font-family:Arial,sans-serif;font-size:14px;color:#e7fbff;background:#071018;border:1px solid #4a7180;}
+    textarea{width:96%;height:78px;padding:5px;}input.url{width:94%;padding:5px;}
+    input.button{color:#071018;background:#6fffe9;border:0;padding:6px 11px;margin:5px 4px 0 0;font-weight:bold;}
+    input.warn{background:#ffd166;}#status{color:#9bbbc5;font-size:12px;min-height:15px;}ul{margin:4px 0;padding-left:18px;}
+    .clear{clear:both;height:1px;}.tag{color:#ff86cf;font-weight:bold;}.small{font-size:11px;color:#9bbbc5;}
+    @media screen and (max-width:480px){#left,#right{float:none;width:auto;}textarea{height:95px;}}
+  </style>
+  <script type="text/javascript">
+    var NOTE_KEY='kai.e7.note.v1';
+    var BRIDGE_KEY='kai.e7.bridge.v1';
+    function el(id){return document.getElementById(id);}
+    function status(message){el('status').innerHTML=message;}
+    function tick(){
+      var now=new Date();
+      var h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
+      el('clockline').innerHTML=(h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+      el('date').innerHTML=now.toDateString();
+    }
+    function storageReady(){
+      try{return typeof window.localStorage!=='undefined';}catch(e){return false;}
+    }
+    function loadDeck(){
+      tick();window.setInterval(tick,1000);
+      if(!storageReady()){status('Local storage unavailable in this file context.');return;}
+      try{
+        var note=localStorage.getItem(NOTE_KEY);if(note!==null){el('note').value=note;}
+        var bridge=localStorage.getItem(BRIDGE_KEY);if(bridge!==null){el('bridge').value=bridge;}
+        status('Offline deck ready. Storage available.');
+      }catch(e){status('Deck opened, but storage access failed.');}
+    }
+    function saveNote(){
+      if(!storageReady()){status('Cannot save: local storage unavailable.');return;}
+      try{localStorage.setItem(NOTE_KEY,el('note').value);status('Scratchpad saved locally.');}
+      catch(e){status('Scratchpad save failed.');}
+    }
+    function clearNote(){
+      if(!window.confirm('Clear the KAI scratchpad?')){return;}
+      el('note').value='';
+      try{if(storageReady()){localStorage.removeItem(NOTE_KEY);}}catch(e){}
+      status('Scratchpad cleared.');
+    }
+    function saveBridge(){
+      var value=el('bridge').value;
+      if(value.indexOf('http://')!==0&&value.indexOf('https://')!==0){status('Bridge must begin with http:// or https://');return;}
+      try{if(storageReady()){localStorage.setItem(BRIDGE_KEY,value);status('Bridge address saved.');}}
+      catch(e){status('Bridge save failed.');}
+    }
+    function openBridge(){
+      var value=el('bridge').value;
+      if(value.indexOf('http://')!==0&&value.indexOf('https://')!==0){status('Bridge must begin with http:// or https://');return;}
+      window.location.href=value;
+    }
+  </script>
+</head>
+<body onload="loadDeck()">
+  <div id="top">
+    <div id="mark">KAI // E7</div>
+    <div id="clock"><div id="clockline">--:--:--</div><div id="date">FIELD DECK</div></div>
+  </div>
+  <div id="main">
+    <div id="left">
+      <div class="panel">
+        <h1>Scratchpad</h1>
+        <textarea id="note" rows="4" cols="32" placeholder="A thought, task, address, or tiny conspiracy..."></textarea><br>
+        <input class="button" type="button" value="SAVE" onclick="saveNote()">
+        <input class="button warn" type="button" value="CLEAR" onclick="clearNote()">
+        <div id="status">Loading offline deck...</div>
+      </div>
+      <div class="panel">
+        <h2>Host bridge</h2>
+        <input class="url" id="bridge" type="text" value="http://" autocapitalize="off"><br>
+        <input class="button" type="button" value="OPEN" onclick="openBridge()">
+        <input class="button" type="button" value="REMEMBER" onclick="saveBridge()">
+      </div>
+    </div>
+    <div id="right">
+      <div class="panel">
+        <h2>Vessel</h2>
+        <p><span class="tag">E7-00</span> / RM-626</p>
+        <p>Firmware 111.040.1511</p>
+        <p>640x360 AMOLED</p>
+        <p>Wi-Fi + MTP verified</p>
+      </div>
+      <div class="panel">
+        <h2>Field rules</h2>
+        <ul>
+          <li>Offline first.</li>
+          <li>Plain HTTP on trusted LANs.</li>
+          <li>Inspect before install.</li>
+          <li>Keep the keyboard busy. :3</li>
+        </ul>
+      </div>
+      <p class="small">Self-contained. No external requests are made until OPEN is pressed.</p>
+    </div>
+    <div class="clear"></div>
+  </div>
+</body>
+</html>

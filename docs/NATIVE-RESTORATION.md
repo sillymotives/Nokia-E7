@@ -70,13 +70,22 @@ The date, time, and Cardiff time zone were corrected and survived a normal
 power cycle on 2026-08-23. The phone no longer depends on its stale 2012 clock
 for date-sensitive testing.
 
-## Active gate: core offline native smoke test
+## Completed gate: core offline launch pass
 
-Run the bounded native-only test in
-[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md). It covers Clock/alarm,
-Calendar, Notes, Calculator, Dictionary, Files, ZIP, Adobe Reader, Microsoft
-Apps, and the on-device User guide. Remove the exact disposable alarm, calendar
-entry, and note at the end.
+Clock, Calendar, Notes, Calculator, Dictionary, Files, ZIP, Adobe Reader,
+Microsoft Apps, and the on-device User guide all reached their native UI without
+a crash. Files and ZIP browsed Mass memory. The User guide exposed its offline
+topic index. Microsoft Apps exposed an account-dependent setup form and is not
+evidence of local Office document handling. Detailed results and unproved
+transactions are recorded in
+[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md).
+
+## Active gate: native local-content validation
+
+Build and deploy a controlled, hash-recorded test pack containing PDF, ZIP,
+plain text, and representative Office documents through the proven Mass-memory
+MTP path. Test the native file manager, ZIP manager, Adobe Reader, and any
+available local Office handler without using a remote service or account.
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

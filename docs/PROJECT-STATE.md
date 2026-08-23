@@ -219,10 +219,15 @@ alarm firing and cleanup, calendar entry persistence and cleanup, note
 save/edit/delete, calculator arithmetic, English dictionary lookup, and User
 guide search/topic opening. No network service or account was involved.
 
-The active gate is now native capture and media. Start with disposable media
-created by the handset itself: still camera and gallery, photo editor, video
-capture/playback/editor, and voice recording/playback. Music, FM radio, and
-physical outputs follow once these native source paths are established.
+The handset-originated capture/media gate has passed by direct user observation:
+still capture, Gallery viewing, photo editing, video capture/playback/editing,
+and voice recording/playback all work. This proves the native capture, media
+database, and handset-codec paths without external encoding variables.
+
+The active gate is now imported media, Music player/library behaviour, FM radio
+with a wired-headset antenna, and available HDMI/TV output. Conservative,
+hash-recorded media fixtures should be introduced through the proven MTP path
+before broader codec limits are explored.
 
 
 

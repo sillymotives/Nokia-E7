@@ -44,9 +44,10 @@ guide is not proof of the installed state or behaviour of firmware
 | PDF reader | Retain | A conservative local PDF 1.3 fixture renders correctly; establish complexity and performance limits later. |
 | Local Office handler | Unknown / Repair | MTP advertises legacy Office object types, but Microsoft Apps exposes an account setup surface rather than a local browser. Identify a genuine handler before testing documents. |
 | File manager and device search | Retain | Files browses Mass memory and opens the controlled plain-text fixture; indexed search and local mutations remain unproved. |
-| Camera, Photos, image editor, video editor | Retain | Test capture, autofocus/flash, geotagging choices, editing, gallery indexing, and export. |
-| Music player, playlists, recorder, FM radio | Retain / Repair | MTP transport formats are known; playback, recording, headset antenna requirements, library refresh, and tags remain unproved. |
-| Video player, HDMI/TV output, Web TV | Retain / Prune | Keep local playback and physical output if they work; legacy Web TV catalogues are likely prune candidates. |
+| Camera, Photos, image editor, video editor | Retain | Still and video capture, Gallery display, native playback, photo editing, and video editing all work by direct user observation. Autofocus/flash modes, geotagging choices, and export remain later detail tests. |
+| Recorder | Retain | Native audio recording and playback work by direct user observation. Format/export limits remain later tests. |
+| Music player, playlists, FM radio | Retain / Repair | MTP transport formats are known; imported playback, library refresh, playlists/tags, and the FM headset-antenna path remain unproved. |
+| Video player, HDMI/TV output, Web TV | Retain / Prune | Handset-captured local video playback works. Imported codec limits and physical output remain unproved; legacy Web TV catalogues are likely prune candidates. |
 | Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Preserve native Maps if GPS and offline map data work. Online search, traffic, and account functions may need offline data or a bridge. |
 | Wi-Fi and browser | Retain / Bridge | Local HTTP, CSS, JavaScript, XHR, and storage are proven. Use the browser as infrastructure only where no meaningful native client exists. |
 | Mail | Repair / Bridge | Test direct IMAP/SMTP/TLS first; if protocol or certificate limits block it, translate on the trusted LAN while retaining native Mail. |
@@ -112,16 +113,26 @@ work. Clock, Calendar, Notes, Calculator, Dictionary, and User guide therefore
 have transaction-level or functional local evidence rather than launch-only
 evidence.
 
-## Active gate: native capture and media
+## Completed gate: handset-originated capture and media
 
-Exercise the native camera, gallery, photo editor, video capture/player/editor,
-voice recorder, music player, FM radio, and available physical outputs. Begin
-with disposable camera, video, and audio captures so the handset itself creates
-known-good media before introducing external codec variables.
+The native camera, Gallery, photo editor, video capture/player/editor, and voice
+recorder were exercised with handset-originated media. The user reports that
+all capture, viewing, editing, recording, and playback paths work.
 
-This gate permits creating and deleting clearly named disposable media in
-ordinary user storage. It does not permit deleting pre-existing media,
-installing codecs, accepting network services, or changing system files.
+This establishes the handset's own codecs and media-database paths without
+introducing external encoding variables.
+
+## Active gate: imported media, radio, and physical output
+
+Test conservative imported audio, image, and video fixtures through MTP, then
+verify Music player library refresh, metadata, playlists, repeat/shuffle, and
+background playback. Test FM radio with a wired 3.5 mm headset acting as the
+antenna. Test HDMI/TV output only if an appropriate cable and display are
+available.
+
+This gate permits adding and removing clearly named test media in ordinary user
+storage. It does not permit deleting pre-existing media, installing codecs,
+accepting network services, or changing system files.
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

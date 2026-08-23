@@ -56,7 +56,10 @@ and survived a normal power cycle. The controlled PDF/ZIP/text probe has passed
 on the handset, establishing Files, Adobe Reader, and ZIP manager as useful
 native local-content paths. The core alarm, calendar, notes, calculator,
 dictionary, and offline User guide transactions also pass. Native capture and
-media are the current restoration gate.
+media also pass end-to-end: stills, Gallery, photo editing, video
+capture/playback/editing, and voice recording/playback. Imported media, Music
+player behaviour, FM radio, and physical output are the current restoration
+gate.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

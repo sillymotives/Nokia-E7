@@ -87,6 +87,23 @@ prerequisite for bounded writes to ordinary payload folders on that partition.
 This does not authorise formatting, repartitioning, or manual mutation of
 Symbian-managed `Private` or `sys` trees.
 
+The guarded MTP device-information probe at `2026-08-23T19:42:41Z` proved:
+
+- libmtp recognises the Suite-mode interface as Nokia E7 in Ovi mode;
+- the MTP identity agrees with the AT evidence: E7-00 firmware
+  `111.040.1511`;
+- Mass memory is exposed as a 16,068,378,624-byte read/write store with
+  16,021,946,368 bytes free;
+- Phone memory is separately exposed as a 496,525,312-byte read-only store;
+- the responder uses 64-bit object sizes and reports battery level 14%;
+- it advertises object metadata for common audio, video, image, text, HTML,
+  playlist, and legacy Office formats;
+- no default media or document folders are assigned.
+
+The advertised format list is a transfer/object capability catalogue, not
+proof that every codec or document feature renders on the phone. The responder
+also advertises destructive operations; none were executed by this probe.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -130,10 +147,12 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Install Debian's host-side `mtp-tools`, switch to Nokia Suite mode, and run the
-guarded MTP device-information probe. The probe may perform MTP device and
-storage discovery only; it may not enumerate file objects, transfer data,
-change properties, delete objects, install software, or write to the phone.
+Run one bounded MTP round trip against the explicitly proven read/write Mass
+memory store. It may create one uniquely named root folder, upload one tiny
+text file, retrieve and hash that exact returned file object, and delete only
+the file and folder object IDs returned by those creation commands. It may not
+touch Phone memory, existing objects, device properties, formatting, reset,
+installation, or vendor data-store operations.
 
 
 

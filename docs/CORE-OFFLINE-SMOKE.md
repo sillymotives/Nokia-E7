@@ -86,3 +86,33 @@ A single readable video is sufficient. Do not open existing personal entries.
 The alarm, calendar entry, and note must be removed before the test is marked
 complete. No application installation, uninstall, reset, account creation,
 network connection, or system-file mutation is authorised by this pass.
+
+## Observed launch pass
+
+Captured: 2026-08-23
+
+A single offline video exercised the launch surface without contacting any
+server. No tested application crashed.
+
+| Native area | Result | Fresh evidence | Still unproved |
+| --- | --- | --- | --- |
+| Clock | Pass: launch/config | Correct date and Cardiff GMT+1 were shown; no alarms existed. | Alarm creation, firing, and cleanup. |
+| Calendar | Pass: launch | August 2026 opened with 23 August selected. | Entry create, persist, reopen, and delete. |
+| Notes | Pass: launch | The native `Create note` editor opened. | Text entry, persistence, editing, and delete. |
+| Calculator | Pass: launch | The full native calculator opened. | Arithmetic transaction. |
+| Dictionary | Partial | English-to-English mode opened; English is installed and the UI offered additional language downloads. | A definition lookup and whether its English data is populated. |
+| Files | Pass: browse | Phone memory and Mass memory were listed; the Mass memory directory tree opened. | File open/create/rename/delete through the native manager. |
+| ZIP | Pass: browse | ZIP manager opened and browsed the Mass memory tree. | Opening, creating, and extracting a controlled archive. |
+| Adobe Reader | Pass: launch | Browse files, Recent files, and Updates & upgrades were available. | Rendering, navigation, and text legibility with a controlled PDF. |
+| Microsoft Apps | Partial: service-bound | It opened an account form for Office mail, documents, calendar, contacts, and instant messaging. | Endpoint compatibility; no credentials or network were used. |
+| User guide | Pass: offline index | The full offline topic index opened, including Office and Connectivity sections. | Search and individual topic rendering. |
+
+This establishes a broad, stable local application surface. It does not prove
+that any historical Nokia, Ovi, Microsoft, news, weather, social, or map server
+still exists. Server-dependent launchers will be evaluated separately and only
+where preserving their native workflow would be meaningful.
+
+The next efficient step is a controlled local content pack: PDF, ZIP, text, and
+representative Office documents transferred through the already proven MTP
+path. That will test native rendering and extraction without depending on any
+retired service.

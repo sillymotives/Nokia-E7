@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nokia E7 host-side baseline capture, version 1.
+# Nokia E7 host-side baseline capture, version 2.
 # Read-only with respect to connected devices: no mount, unmount, install,
 # repair, unlock, flash, or device write operations are performed.
 
@@ -10,7 +10,7 @@ export LC_ALL=C
 export LANG=C
 umask 077
 
-readonly SCRIPT_VERSION="1"
+readonly SCRIPT_VERSION="2"
 
 say() {
     printf '%s\n' "$*"
@@ -110,7 +110,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
             say "authorized=$(read_one_line "$dev/authorized")"
             if have udevadm; then
                 udevadm info --query=property --path="$dev" 2>&1 |
-                    sed -E '/(^ID_SERIAL=|^ID_SERIAL_SHORT=)/d' |
+                    sed -E '/^(ID_SERIAL|ID_SERIAL_SHORT|ID_USB_SERIAL|ID_USB_SERIAL_SHORT)=/d' |
                     sed -n '1,160p'
             fi
             say "--"
@@ -123,7 +123,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
         usb-devices 2>&1 | awk '
             BEGIN { RS=""; IGNORECASE=1 }
             /Vendor=0421|Nokia/ { print $0 "\n" }
-        '
+        ' | sed -E 's/(SerialNumber=).*/\1[redacted]/'
     fi
 
     section "Block and filesystem view"
@@ -140,6 +140,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
     if [[ -d /dev/disk/by-id ]]; then
         find /dev/disk/by-id -maxdepth 1 -type l \
             \( -iname '*usb*' -o -iname '*nokia*' \) -printf '%f -> %l\n' 2>&1 |
+            sed -E 's/(usb-Nokia_[^ ]*_)[^- ]+(-0:0)/\1[redacted]\2/' |
             sort
     else
         say "[/dev/disk/by-id absent]"
@@ -163,7 +164,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
         ls -l -- "$tty"
         if have udevadm; then
             udevadm info --query=property --name="$tty" 2>&1 |
-                sed -E '/(^ID_SERIAL=|^ID_SERIAL_SHORT=)/d' |
+                sed -E '/^(ID_SERIAL|ID_SERIAL_SHORT|ID_USB_SERIAL|ID_USB_SERIAL_SHORT)=/d' |
                 sed -n '1,140p'
         fi
         say "--"
@@ -174,10 +175,12 @@ mkdir -m 700 -- "$RUN_DIR" || {
     if have journalctl; then
         journalctl -k -b --no-pager 2>&1 |
             grep -Ei 'usb|0421|nokia|mtp|cdc|acm|mass storage|scsi' |
+            sed -E 's/[0-9]{15}/[15-digit-id-redacted]/g' |
             tail -n 320 || true
     elif have dmesg; then
         dmesg 2>&1 |
             grep -Ei 'usb|0421|nokia|mtp|cdc|acm|mass storage|scsi' |
+            sed -E 's/[0-9]{15}/[15-digit-id-redacted]/g' |
             tail -n 320 || true
     else
         say "No journalctl or dmesg command available."
@@ -197,7 +200,13 @@ mkdir -m 700 -- "$RUN_DIR" || {
     done
 
     section "Network device status"
-    safe_command "NetworkManager devices" nmcli --terse --fields DEVICE,TYPE,STATE device status
+    printf '\n--- NetworkManager devices ---\n'
+    if have nmcli; then
+        nmcli --terse --fields DEVICE,TYPE,STATE device status 2>&1 |
+            sed -E 's/(p2p-dev-)?wlx[[:xdigit:]]+/\1wlx[redacted]/g' || true
+    else
+        say "[not installed: nmcli]"
+    fi
 
     section "Completion"
     say "UTC finish: $(date -u --iso-8601=seconds 2>/dev/null || date -u)"
@@ -241,4 +250,3 @@ say "PASS: Nokia E7 read-only host baseline complete."
 say "Bundle:   $BUNDLE"
 say "Checksum: $BUNDLE_SUM"
 say "No write was made to the phone."
-

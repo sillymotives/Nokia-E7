@@ -51,3 +51,18 @@ memory store: create one unique root folder, upload one tiny text file,
 retrieve and hash it, then delete only the exact file and folder object IDs
 returned by their creation commands. Reset, format, bulk deletion, phone-memory
 writes, and arbitrary property changes remain unauthorised.
+
+## Verified round trip
+
+The bounded transaction at `2026-08-23T19:50:01Z` completed successfully:
+
+- the script selected only Mass memory storage ID `0x00020001`;
+- it proved the unique test name absent, then created folder object `323`;
+- it uploaded a 52-byte `KAI.TXT` as file object `16777331`;
+- the retrieved file matched the host original byte-for-byte and at SHA-256
+  `2f8263b8ffa7176279d8511381853dc190db32c82a61664ee3455e2375b60437`;
+- it deleted only the returned file and folder object IDs;
+- a final folder listing proved the unique test folder absent.
+
+The transaction therefore proves working host-to-phone upload, phone-to-host
+retrieval, byte integrity, exact-object deletion, and clean teardown over MTP.

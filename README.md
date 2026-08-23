@@ -64,10 +64,11 @@ work, track-aware MTP exposed Alpha, and a native playlist registered. Beta's
 absence in that particular ingest probe is a non-blocking transfer quirk. The
 video player also has a local no-autorotation quirk despite healthy system
 rotation elsewhere. Maps is missing its street-map payload, and Offline mode
-blocks Camera location. The first controlled system-state write successfully
-reached General/RF-on without a SIM, but Belle's top status/settings drawer
-then froze and required a hard reset. The active gate is a 90-second,
-automatically rolled-back General-mode pulse that tests only Camera location.
+blocks Camera location. Controlled no-SIM General/RF-on trials reached General
+mode but deadlocked system/profile/telephony services; the timed trial also
+lost its AT rollback path and required a hard reset. Runtime General-mode
+forcing is now closed. The active gate is a read-only firmware and recovery
+preflight before any custom ROFS or firmware image is built.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -91,8 +92,11 @@ The integrated-GPS and offline-Maps isolation sequence is recorded in
 [`docs/GPS-MAPS-V1.md`](docs/GPS-MAPS-V1.md).
 The guarded runtime General-mode experiment and rollback are recorded in
 [`docs/GENERAL-MODE-TRIAL-V1.md`](docs/GENERAL-MODE-TRIAL-V1.md).
-The timed Camera-location isolation and automatic rollback are recorded in
+The timed Camera-location isolation and failed automatic rollback are recorded in
 [`docs/GENERAL-MODE-LOCATION-PULSE-V2.md`](docs/GENERAL-MODE-LOCATION-PULSE-V2.md).
+The firmware identity, recovery prerequisites, and Offline-first custom-image
+architecture are recorded in
+[`docs/FIRMWARE-PREFLIGHT-V1.md`](docs/FIRMWARE-PREFLIGHT-V1.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

@@ -98,6 +98,7 @@ Offline-to-General transition when the SIM property is not usable. The AT
 plugin reached the lower profile interface and bypassed that UI guard.
 
 The first write therefore succeeded but is not a safe permanent mode. The
-follow-up isolates Camera location from the unsafe status drawer in a timed,
-automatically rolled-back window. See
+timed follow-up also deadlocked, stopped answering AT commands, and required a
+hard reset after its automatic rollback became unreachable. Runtime no-SIM
+General/RF-on forcing is closed. See
 [`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).

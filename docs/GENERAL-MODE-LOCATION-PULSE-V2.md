@@ -52,8 +52,9 @@ responsive. Do not open the top status/settings drawer, Maps, positioning
 settings, connectivity settings, Profiles, or any telephony surface during
 this pulse.
 
-The host will restore Offline/CFUN 0 automatically. If the handset freezes,
-hard-reset it once, do not repeat the pulse, and preserve the generated report.
+The host will attempt to restore Offline/CFUN 0 automatically. If the handset
+freezes, hard-reset it once, do not repeat the pulse, and preserve the generated
+report.
 If the pulse is partial but the handset and USB interface remain responsive,
 run the included explicit rollback wrapper:
 
@@ -74,3 +75,22 @@ run the included explicit rollback wrapper:
   attempted automatic rollback or one hard reset only.
 
 This pulse is diagnostic. It is not a candidate permanent operating mode.
+
+## Observed result and closure
+
+The phone entered General mode and Camera remained capable of rendering its
+viewfinder. The wider system then became unresponsive. The AT endpoint stopped
+answering during the pulse, so the automatic `AT+CFUN=0` rollback could not be
+delivered or verified. A hard reset was required and restored the normal
+Offline state.
+
+The split behaviour is consistent with a system/profile/telephony deadlock
+rather than loss of display, camera hardware, or total power. Runtime
+General/RF-on forcing without a SIM is closed and must not be repeated.
+
+The location problem moves to firmware and policy analysis. Camera's open
+source geotagging path calls `RLocationTrail` directly, while the corresponding
+Location Trail source includes explicit Offline handling and continues to
+consume GPS positions. The preferred repair is therefore a narrow
+Offline-safe Location Trail/LBS/profile-policy change, not a permanent General
+mode or deletion of foundational telephony libraries.

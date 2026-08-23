@@ -100,10 +100,12 @@ The next bounded experiment is the runtime functionality trial in
 [`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
 
 That trial proved a real General/RF-on transition, but Belle's top
-status/settings drawer froze in the no-SIM General state. The next location
-test deliberately excludes that drawer and automatically restores Offline
-after 90 seconds; see
-[`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
+status/settings drawer froze in the no-SIM General state. A timed follow-up
+without the drawer also deadlocked and lost its AT rollback path. Runtime
+General-mode forcing is closed; location repair moves to an Offline-first
+firmware-policy investigation. See
+[`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md) and
+[`FIRMWARE-PREFLIGHT-V1.md`](FIRMWARE-PREFLIGHT-V1.md).
 
 ## Evidence basis
 

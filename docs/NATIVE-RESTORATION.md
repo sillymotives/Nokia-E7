@@ -177,16 +177,18 @@ script had already completed and sent no reset or persistent-profile command.
 Full evidence and interpretation are in
 [`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
 
-## Active gate: General-mode Camera-location pulse v2
+## Active gate: firmware recovery preflight
 
-The next probe opens General mode for exactly 90 seconds, monitors CFUN and
-registration, and automatically restores CFUN 0. On the handset it permits
-only Camera's `Save location info` setting. The top drawer and all other
-connectivity/profile surfaces are excluded because the drawer is a proven
-freeze trigger in the no-SIM General state.
-
-The pulse is diagnostic, not a proposed operating mode. Follow
+The timed Camera-location follow-up also deadlocked, stopped answering AT
+commands, and required a hard reset after its automatic rollback became
+unreachable. Runtime no-SIM General/RF-on forcing is closed. Follow
 [`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
+
+The current gate inventories the exact stock firmware, product/variant code,
+preservation images, Nokia service tools, and dead-USB recovery path before any
+custom image is built. The intended first patch is a narrow Offline-safe
+location-policy repair. Follow
+[`FIRMWARE-PREFLIGHT-V1.md`](FIRMWARE-PREFLIGHT-V1.md).
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

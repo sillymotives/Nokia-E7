@@ -118,21 +118,33 @@ The handset stayed usable until the top status/settings drawer was opened. It
 then froze and required a hard reset. Reboot restored Offline mode. The script
 had already completed successfully and sent no reset or persistent command.
 
-## Active gate: timed Camera-location isolation
+## General-mode location pulse result
 
-The v2 pulse permits a 90-second General-mode window, polls CFUN and
-registration, and restores CFUN 0 automatically. The sole handset action is
-Camera's `Save location info` setting. The proven-freeze top drawer is excluded.
-See [`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
+The timed follow-up also failed safely enough to preserve the handset, but not
+cleanly enough to remain an available strategy. General mode appeared and the
+Camera viewfinder continued rendering, then the wider system and AT endpoint
+became unresponsive. The script's automatic `CFUN=0` rollback could not be
+delivered or verified. A hard reset restored Offline mode.
+
+Runtime no-SIM General/RF-on forcing is closed and must not be repeated. See
+[`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
+
+## Active gate: firmware recovery preflight
+
+The project is now permitted to investigate custom firmware, but no image is
+yet flash-authorised. The current gate inventories exact stock firmware,
+product/variant identity, preservation images, Nokia service tools, and a
+dead-USB recovery path. See
+[`FIRMWARE-PREFLIGHT-V1.md`](FIRMWARE-PREFLIGHT-V1.md).
 
 ## Mutation policy
 
-Current gates may create clearly named disposable objects in ordinary user
-storage or make an explicitly documented, read-back-verified runtime state
-change with an exact rollback. They do not authorise:
+The active firmware preflight may create reports on the host and transmit only
+the already-proven AT identity queries. Earlier storage transactions remain
+documented but are not part of this gate. The preflight does not authorise:
 
 - formatting or repartitioning;
-- firmware flashing;
+- firmware flashing before the recovery preflight and exact image review pass;
 - manual writes into Symbian-managed private/system trees;
 - package installation or removal without a separate reviewed gate;
 - account creation or acceptance of paid/mobile connectivity;

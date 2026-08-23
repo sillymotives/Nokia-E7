@@ -78,3 +78,26 @@ it does not justify guessing at persistent Symbian repositories.
 No persistent setting is requested. A power cycle may return the no-SIM phone
 to Offline/CFUN 0 even if the runtime trial succeeds. Persistence, if later
 desired, requires a separate evidence-backed design and its own rollback.
+
+## Observed result
+
+The guarded apply completed successfully on 2026-08-23. Read-back proved the
+transition from CFUN 0 to CFUN 1. The no-SIM query still returned an error,
+registration became denied rather than active, the operator remained empty,
+and the AT interface stayed responsive through the completed report.
+
+The handset remained usable until the user opened Belle's top status/settings
+drawer. It then froze and required a hard reset. Reboot restored the original
+no-SIM Offline state. The script itself did not request a reset and had already
+finished successfully before the interaction-triggered freeze.
+
+Primary Symbian source resolves the earlier uncertainty: Nokia's CFUN handler
+maps value 1 directly to General profile ID 0 and waits for the normal RF-on
+system state. Separate Profile Engine and SysAp UI paths normally refuse the
+Offline-to-General transition when the SIM property is not usable. The AT
+plugin reached the lower profile interface and bypassed that UI guard.
+
+The first write therefore succeeded but is not a safe permanent mode. The
+follow-up isolates Camera location from the unsafe status drawer in a timed,
+automatically rolled-back window. See
+[`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).

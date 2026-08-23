@@ -107,19 +107,23 @@ The mass-memory census found Maps catalogue/icon scaffolding but no substantial
 offline map region. Missing map data and the Offline-profile location boundary
 are therefore tracked separately.
 
-## Active gate: first controlled system-state write
+## First controlled system-state write
 
-The guarded General-mode trial first proves the exact E7 AT interface, runtime
-CFUN 0, support for values 0 and 1, absent SIM context, and no active cellular
-registration. Its apply path may transmit exactly `AT+CFUN=1`; its rollback
-path may transmit exactly `AT+CFUN=0`. Both use read-back. Neither sends a reset
-or persistent-profile command or writes phone files or firmware.
+The guarded General-mode trial proved a transition from CFUN 0 to CFUN 1,
+absent SIM context, denied rather than active registration, an empty operator,
+and a responsive AT interface. Nokia's Symbian source confirms that this
+command directly activates General profile ID 0 and the normal RF-on state.
 
-The trial tests whether full runtime modem functionality releases Belle from
-Offline mode. It does not assume that the AT state and visible profile are
-identical. Follow [`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
+The handset stayed usable until the top status/settings drawer was opened. It
+then froze and required a hard reset. Reboot restored Offline mode. The script
+had already completed successfully and sent no reset or persistent command.
 
-Follow [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
+## Active gate: timed Camera-location isolation
+
+The v2 pulse permits a 90-second General-mode window, polls CFUN and
+registration, and restores CFUN 0 automatically. The sole handset action is
+Camera's `Save location info` setting. The proven-freeze top drawer is excluded.
+See [`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
 
 ## Mutation policy
 

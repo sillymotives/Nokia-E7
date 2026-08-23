@@ -164,18 +164,29 @@ The mass-memory census found only Nokia Maps catalogue/icon scaffolding, not a
 substantial offline map payload. The missing tiles and the Offline-profile
 location block remain separate problems.
 
-## Active gate: guarded General-mode runtime trial v1
+## Completed gate: guarded General-mode runtime trial v1
 
-The first authorised system-state write is deliberately narrow. After proving
-the exact E7 interface, current CFUN 0, supported values, absent SIM context,
-and no active cellular registration, the helper may send exactly
-`AT+CFUN=1`. It then reads the state back and rechecks the cellular boundary.
-The paired rollback sends exactly `AT+CFUN=0`.
+The first authorised system-state write proved CFUN 0 to CFUN 1, absent SIM
+context, denied rather than active registration, an empty operator, and a
+responsive AT path. Nokia's source confirms that this directly activates
+General profile ID 0 and the normal RF-on system state.
 
-This trial may expose General mode, or it may show that Belle's Offline policy
-lives above the modem-functionality layer. It sends no reset or persistent
-profile command and does not touch phone files or firmware. Follow
+The user then opened Belle's top status/settings drawer. The handset froze and
+required a hard reset; reboot restored its normal no-SIM Offline state. The
+script had already completed and sent no reset or persistent-profile command.
+Full evidence and interpretation are in
 [`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
+
+## Active gate: General-mode Camera-location pulse v2
+
+The next probe opens General mode for exactly 90 seconds, monitors CFUN and
+registration, and automatically restores CFUN 0. On the handset it permits
+only Camera's `Save location info` setting. The top drawer and all other
+connectivity/profile surfaces are excluded because the drawer is a proven
+freeze trigger in the no-SIM General state.
+
+The pulse is diagnostic, not a proposed operating mode. Follow
+[`GENERAL-MODE-LOCATION-PULSE-V2.md`](GENERAL-MODE-LOCATION-PULSE-V2.md).
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

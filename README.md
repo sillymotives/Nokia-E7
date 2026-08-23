@@ -42,7 +42,8 @@ write to the E7.
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
 
-The recovered 2026-08-05 Linux toolkit is preserved under
+The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
+is preserved under
 [`archive/nokia-e7-toolkit-20260805/`](archive/nokia-e7-toolkit-20260805/).
 Its trust boundaries are documented in
 [`docs/TOOLKIT-AUDIT.md`](docs/TOOLKIT-AUDIT.md).

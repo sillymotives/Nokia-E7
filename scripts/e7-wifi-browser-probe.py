@@ -432,7 +432,8 @@ def main() -> int:
         print("PARTIAL: no E7-identified root-page request was captured.")
     print(f"Bundle:   {bundle}")
     print(f"Checksum: {checksum}")
-    print("No outbound connection or phone write was made by the probe.")
+    print("No outbound connection or deliberate phone-data write was made by the probe.")
+    print("Ordinary browser history or session state may have changed.")
     return status
 
 

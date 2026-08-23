@@ -69,6 +69,24 @@ The fixed capability probe at `2026-08-23T19:25:58Z` proved:
 - the command catalogue exposes a much larger cellular and manufacturer test
   surface which remains unauthorised.
 
+The guarded mass-memory census at `2026-08-23T19:34:24Z` proved:
+
+- `/dev/sdb1` mounted with `ro,nosuid,nodev,noexec` and unmounted successfully;
+- the 15 GiB VFAT filesystem uses only about 18 MiB;
+- 321 directories, 120 files, and no symbolic links;
+- Symbian `Private`, `sys`, and `cities` roots are present;
+- no top-level `resource` tree and no SIS/SISX installers are present;
+- media consists primarily of nine JPEGs plus factory-era maps/gallery/index
+  metadata;
+- the ordinary `Installs`, `Games`, `Music`, `Sounds`, and `Videos` payload
+  areas are essentially empty.
+
+The user explicitly confirms that none of the current mass-memory contents
+require preservation. A retrieved or newly created image is therefore not a
+prerequisite for bounded writes to ordinary payload folders on that partition.
+This does not authorise formatting, repartitioning, or manual mutation of
+Symbian-managed `Private` or `sys` trees.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -86,10 +104,12 @@ state is identical.
 
 ## Unknowns to resolve
 
-- exact product code, RM variant, firmware version, and Symbian build;
+- exact product code and full Symbian build beyond the proven RM-626 firmware;
 - lock, developer-certificate, and software-installation state;
-- internal mass-memory and removable-media layout;
-- available USB personalities and host-visible interfaces;
+- internal system-drive and removable-media layout beyond the proven 15 GiB
+  mass-memory partition;
+- additional USB personalities beyond the proven Mass storage and Nokia Suite
+  modes;
 - installed applications, patches, certificates, and user data worth keeping;
 - viable backup and recovery routes;
 - current browser/TLS limits and local-network capabilities.
@@ -110,11 +130,11 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Switch to Mass storage mode and run the guarded read-only filesystem census. It
-may mount only the freshly proven Nokia VFAT partition with
-`ro,nosuid,nodev,noexec`, record names and metadata, and unmount it. It may not
-read file contents, change filesystem metadata, flash, format, install, or
-write to the phone.
+Install Debian's host-side `mtp-tools`, switch to Nokia Suite mode, and run the
+guarded MTP device-information probe. The probe may perform MTP device and
+storage discovery only; it may not enumerate file objects, transfer data,
+change properties, delete objects, install software, or write to the phone.
+
 
 
 

@@ -59,10 +59,11 @@ dictionary, and offline User guide transactions also pass. Native capture and
 media also pass end-to-end: stills, Gallery, photo editing, video
 capture/playback/editing, and voice recording/playback. Imported JPEG, MP3, and
 H.264/AAC playback pass, as does FM radio. HDMI is deferred for lack of a
-mini-HDMI cable. Generic MTP file transfer exposed a Music-player ingestion
-limit—filenames instead of tags and no native playlist—so a track-aware MTP
-metadata/playlist probe is the active restoration gate. The video player also
-has a local no-autorotation quirk despite healthy system rotation elsewhere.
+mini-HDMI cable. Music player is **Retain**: imported playback and controls
+work, track-aware MTP exposed Alpha, and a native playlist registered. Beta's
+absence in that particular ingest probe is a non-blocking transfer quirk. The
+video player also has a local no-autorotation quirk despite healthy system
+rotation elsewhere. Integrated GPS and offline Maps are now the active gate.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -82,6 +83,8 @@ The imported JPEG/MP3/M3U/MP4 compatibility pack and Music-player test sequence
 are recorded in [`docs/NATIVE-MEDIA-V1.md`](docs/NATIVE-MEDIA-V1.md).
 The track-aware MTP metadata and native-playlist follow-up is recorded in
 [`docs/NATIVE-MUSIC-V2.md`](docs/NATIVE-MUSIC-V2.md).
+The integrated-GPS and offline-Maps isolation sequence is recorded in
+[`docs/GPS-MAPS-V1.md`](docs/GPS-MAPS-V1.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

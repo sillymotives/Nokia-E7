@@ -2,6 +2,24 @@
 
 Prepared: 2026-08-23
 
+## Handset result
+
+The user completed the v2 handset check on 2026-08-23. Music player exposed
+only `KAI Tone Alpha` from the two-track deployment. The native playlist
+appeared successfully and contained that one visible Alpha track.
+
+This proves two useful native paths: the player accepts at least one
+track-aware MTP object, and an MTP playlist object becomes a real Music player
+playlist. It does not establish why Beta was absent. The generated host report
+was not supplied with the observation, so the boundary between host-visible
+MTP state, media-library ingestion, and player presentation remains open.
+
+Music player is therefore **Retain** and is no longer a restoration gate.
+Single-track metadata and native playlists are useful. Beta's absence is kept
+as a non-blocking content-ingestion observation, not classified as a defect in
+the player. It can be revisited only if future library loading actually needs
+that exact host path.
+
 ## Why v2 exists
 
 Imported-media v1 proved that both MP3 byte streams decode and play. It also

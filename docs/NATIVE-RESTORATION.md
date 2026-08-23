@@ -47,7 +47,7 @@ guide is not proof of the installed state or behaviour of firmware
 | Camera, Photos, image editor, video editor | Retain | Still and video capture, Gallery display, native playback, photo editing, and video editing all work by direct user observation. Autofocus/flash modes, geotagging choices, and export remain later detail tests. |
 | Recorder | Retain | Native audio recording and playback work by direct user observation. Format/export limits remain later tests. |
 | FM radio | Retain | The user confirms that native FM reception works. Station memory and RDS are optional later detail tests. |
-| Music player and playlists | Retain / Repair | Imported MP3 playback and the exercised player controls work. Generic MTP file transfer preserved embedded ID3 tags but Music player showed filenames, and a copied M3U did not register as a playlist. Track-aware MTP metadata and a native playlist object are the active repair test. |
+| Music player and playlists | Retain | Imported MP3 playback and the exercised player controls work. A track-aware MTP object exposed Alpha and a native MTP playlist registered successfully. Beta did not appear through that particular ingest probe, but this non-blocking content-transfer quirk does not diminish the useful native player. |
 | Video player and Web TV | Retain / Prune | Handset-captured and imported H.264/AAC video playback work. The player does not autorotate even though system rotation works elsewhere; treat that as a local player limitation. Legacy Web TV catalogues are likely prune candidates. |
 | HDMI/TV output | Blocked: test hardware | No suitable mini-HDMI cable is available. There is no failure evidence; defer physical verification rather than inferring a pass. |
 | Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Preserve native Maps if GPS and offline map data work. Online search, traffic, and account functions may need offline data or a bridge. |
@@ -142,17 +142,25 @@ become a native playlist. The video player's playback surface also did not
 autorotate, while system rotation works elsewhere. Full observations and the
 bounded interpretation are in [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md).
 
-## Active gate: track-aware music ingestion v2
+## Partial gate: track-aware music ingestion v2
 
-The v1 audio bytes are known-good. The next probe therefore changes only the
-host transfer semantics: `mtp-sendtr` supplies title, artist, album, track
-number, and duration as MTP object properties, and `mtp-newplaylist` creates a
-real playlist object referencing the returned track IDs. See
-[`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md).
+Music player exposed Alpha and registered the native playlist containing that
+visible track. Together with the successful imported-media playback and player
+controls, this is sufficient to classify Music player as **Retain**. Beta's
+absence remains a non-blocking transfer/library-ingestion observation. The
+generated host report was not supplied, so no stronger transport-layer claim
+is made. Full interpretation is in [`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md).
 
-This is the decisive test for whether the stock Music player consumes the
-metadata model that the E7 advertises over MTP. It does not install software,
-alter codecs, or touch pre-existing media.
+## Active gate: integrated GPS and offline Maps v1
+
+The next gate isolates the integrated GNSS receiver from assisted positioning
+and retired Nokia services, then checks whether any useful offline map content
+is already present. Follow [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
+
+The mass-memory census found only Nokia Maps catalogue/icon scaffolding, not a
+substantial offline map payload. A successful satellite fix and absent street
+tiles are therefore separate, compatible results: retain the receiver and
+repair map content later.
 
 This gate permits adding and removing clearly named test media in ordinary user
 storage. It does not permit deleting pre-existing media, installing codecs,

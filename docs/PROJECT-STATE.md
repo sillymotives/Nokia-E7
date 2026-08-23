@@ -4,256 +4,118 @@ Updated: 2026-08-23
 
 ## Scope
 
-- Device: US-model Nokia E7.
+- Device family: Nokia E7-00, US model, running Nokia Belle Refresh.
 - Intended role: Wi-Fi-only modernised pocket computer.
-- Excluded: restoring cellular service.
+- Excluded: restoration of cellular service.
+- Strategy: retain useful native functions, repair or bridge valuable broken
+  dependencies, and prune dead surfaces reversibly.
 
-## Fresh host evidence
+## Evidence boundary
 
-The read-only capture at `2026-08-23T19:06:16Z` proved:
+This public page records conclusions, not raw captures. Private evidence may
+contain host paths, device identifiers, storage identifiers, network details,
+personal filenames, or exact locations. Those values and the private
+preservation-image receipt are deliberately excluded from the repository.
 
-- USB identity `0421:0333`, reported as Nokia E7-00;
-- USB 2.0 high-speed operation at 480 Mbit/s;
-- one Mass Storage interface using class/subclass/protocol `08/06/50` and the
-  Linux `usb-storage` driver;
-- one removable, hot-pluggable Nokia `S60` disk at `/dev/sdb`, approximately
-  15 GiB, with a single unmounted VFAT partition at `/dev/sdb1`;
-- the kernel did not mark the disk read-only, although the capture itself made
-  no device write;
-- no `ttyACM`, `ttyUSB`, MTP, or GVFS phone interface in Mass storage mode.
+The test scripts independently prove their target device and storage before a
+write. Generated run bundles remain private until reviewed and sanitised.
 
-The raw capture remains private because it contains host and device identifiers.
-Version 1 of the capture script incompletely redacted the USB serial in two
-secondary inventories. Version 2 corrected those fields but missed serial text
-embedded in a tty `DEVLINKS` value. Version 3 applies a global 15-digit
-identifier redaction to udev output. Both affected captures remain private.
+## Proven host and transport paths
 
-The read-only Nokia Suite capture at `2026-08-23T19:14:49Z` additionally
-proved:
+- The phone exposes distinct Nokia Suite and Mass storage USB personalities.
+- A bounded AT-information probe identified the model and firmware without
+  exercising cellular or manufacturer-test commands.
+- Mass memory can be mounted read-only for census work.
+- Nokia Suite mode exposes a working, writable MTP Mass memory store and a
+  separate read-only Phone memory store.
+- A bounded MTP create, retrieve, byte-compare, and exact-object cleanup
+  transaction passed.
+- Persistent guarded deployments can create only a uniquely named folder,
+  retrieve every returned object by ID, and verify its bytes.
+- The E7 reaches a same-subnet host over Wi-Fi, and its native browser loads
+  local HTTP, CSS, JavaScript, XHR, canvas, storage, audio, and video surfaces.
 
-- Suite-mode USB identity `0421:0335`, still reported as Nokia E7-00;
-- one 18-interface USB composite device operating at 480 Mbit/s;
-- `/dev/ttyACM0`, interface `01`, bound to `cdc_acm` and proven by udev as
-  Nokia vendor `0421`, model `0335`;
-- `/dev/ttyACM1`, interface `03`, with the same Nokia ownership proof;
-- `usbpn0`, backed by the `cdc_phonet` function and currently unmanaged by
-  NetworkManager;
-- an Imaging/PTP interface marked by udev as MTP-capable, although no host MTP
-  utility is currently installed;
-- no mass-storage block device in Nokia Suite mode.
+These conclusions are documented in the focused USB, AT, Mass-memory, MTP, and
+Wi-Fi notes. Raw captures remain private.
 
-The allowlisted identity probe at `2026-08-23T19:21:20Z` freshly proved:
+## Handset baseline
 
-- interface `01` (`/dev/ttyACM0` during that enumeration) is the responsive
-  standard AT information channel;
-- manufacturer `Nokia`, model `Nokia E7-00`, RM variant `RM-626`;
-- firmware `111.040.1511`, dated `2012-07-28`;
-- interface `03` (`/dev/ttyACM1` during that enumeration) returned no response
-  to `AT`, `ATI`, `AT+CGMI`, `AT+CGMM`, or `AT+CGMR`;
-- ModemManager was active, but the complete interface-01 exchange returned
-  clean `OK` responses.
+- Date, time, and Cardiff time zone were corrected and survived a normal power
+  cycle.
+- The native menu, settings families, installed overlay, widget catalogue,
+  home screens, and software-information surfaces were inventoried.
+- The mass-memory census found normal Symbian scaffolding and very little user
+  payload. The user confirms that its existing ordinary contents need not be
+  preserved.
+- A complete private mass-memory preservation image is recorded elsewhere,
+  but must be freshly verified before any destructive storage or firmware work.
 
-The fixed capability probe at `2026-08-23T19:25:58Z` proved:
+## Native functions retained
 
-- `+CFUN: 0`: the cellular modem is in minimum-functionality mode;
-- `+CBC: 1,14`: the battery is connected, the handset is externally powered,
-  and 14% capacity was reported;
-- cellular signal was unknown/unavailable and SIM, registration, and operator
-  queries returned errors;
-- the AT character set is UTF-8;
-- SMS PDU and text syntaxes are implemented, but the exposed message-storage
-  lists are empty;
-- AT phonebook storage/read commands are not exposed;
-- keypad emulation and Nokia backlight control are implemented, with backlight
-  state `2` reported;
-- the command catalogue exposes a much larger cellular and manufacturer test
-  surface which remains unauthorised.
+- Clock and alarms
+- Calendar
+- Notes
+- Calculator
+- Dictionary
+- Offline User guide
+- Files
+- ZIP manager
+- Adobe Reader
+- Camera and Gallery
+- Photo editor
+- Video capture, playback, and editor
+- Voice recorder
+- FM radio
+- Music player and native playlists
+- Wi-Fi and the native browser as supporting infrastructure
 
-The guarded mass-memory census at `2026-08-23T19:34:24Z` proved:
+Evidence includes local transactions, handset-originated capture, and
+conservative imported TXT, PDF, ZIP, JPEG, MP3, and H.264/AAC fixtures.
 
-- `/dev/sdb1` mounted with `ro,nosuid,nodev,noexec` and unmounted successfully;
-- the 15 GiB VFAT filesystem uses only about 18 MiB;
-- 321 directories, 120 files, and no symbolic links;
-- Symbian `Private`, `sys`, and `cities` roots are present;
-- no top-level `resource` tree and no SIS/SISX installers are present;
-- media consists primarily of nine JPEGs plus factory-era maps/gallery/index
-  metadata;
-- the ordinary `Installs`, `Games`, `Music`, `Sounds`, and `Videos` payload
-  areas are essentially empty.
+Music player plays imported MP3s and its exercised controls work. Generic file
+transfer preserved audio bytes but did not create a native playlist. The
+track-aware MTP follow-up exposed Alpha and registered a real native playlist.
+Beta did not appear through that particular probe, but the user considers the
+working player fit for purpose; Music player is therefore **Retain** and the
+missing second track is only a non-blocking ingestion observation.
 
-The user explicitly confirms that none of the current mass-memory contents
-require preservation. A retrieved or newly created image is therefore not a
-prerequisite for bounded writes to ordinary payload folders on that partition.
-This does not authorise formatting, repartitioning, or manual mutation of
-Symbian-managed `Private` or `sys` trees.
+The stock video player does not autorotate its playback surface, while system
+rotation works elsewhere. This is a player-specific UI limitation, not evidence
+of a failed orientation sensor.
 
-The guarded MTP device-information probe at `2026-08-23T19:42:41Z` proved:
+## Deferred or unresolved
 
-- libmtp recognises the Suite-mode interface as Nokia E7 in Ovi mode;
-- the MTP identity agrees with the AT evidence: E7-00 firmware
-  `111.040.1511`;
-- Mass memory is exposed as a 16,068,378,624-byte read/write store with
-  16,021,946,368 bytes free;
-- Phone memory is separately exposed as a 496,525,312-byte read-only store;
-- the responder uses 64-bit object sizes and reports battery level 14%;
-- it advertises object metadata for common audio, video, image, text, HTML,
-  playlist, and legacy Office formats;
-- no default media or document folders are assigned.
+- HDMI/TV output is test-hardware blocked because the required cable is not
+  available. This is not evidence of failure or success.
+- A genuine local Office document handler has not yet been identified; the
+  observed Microsoft Apps surface is account-dependent.
+- Contacts import/export, Bluetooth roles, USB host, native backup/restore,
+  Mail, Internet calling, VPN, and remote drives remain later gates.
+- Store, Nokia/Ovi account surfaces, Nokia Music, Social, Weather, Public
+  Transport, Web TV, and obsolete support links remain prune/bridge candidates
+  after their useful local dependencies are separated from retired services.
 
-The advertised format list is a transfer/object capability catalogue, not
-proof that every codec or document feature renders on the phone. The responder
-also advertises destructive operations; none were executed by this probe.
+## Active gate: integrated GPS and offline Maps v1
 
-The bounded MTP transaction at `2026-08-23T19:50:01Z` then proved:
+The next sequence isolates the integrated satellite receiver from assisted
+positioning, network positioning, map downloads, and retired Nokia services.
+It then checks local map rendering and favourite persistence separately.
 
-- explicit selection of the Mass memory store;
-- creation of one uniquely named root folder and one 52-byte text object;
-- successful retrieval with a byte-for-byte and SHA-256 match;
-- deletion of only the exact file and folder object IDs returned at creation;
-- no test-folder residue after cleanup.
+The mass-memory census found Maps catalogue/icon scaffolding but no substantial
+offline map region. A satellite fix with missing street tiles would therefore
+be a valid split result: retain the receiver and repair offline content later.
 
-MTP is therefore a verified bidirectional payload and retrieval path, not just
-an advertised interface.
+Follow [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
 
-The local Wi-Fi/browser probe at `2026-08-23T20:03:28Z` proved:
+## Mutation policy
 
-- the E7 can reach a same-subnet host over plain HTTP by Wi-Fi;
-- its user agent identifies Symbian/3, Series60/5.3, E7-00 firmware
-  `111.040.1511`, and AppleWebKit/535.1;
-- its reported screen is 640×360 with a 640×284 page viewport at DPR 1;
-- CSS, JavaScript, GIF, favicon, and same-origin XHR resources loaded;
-- XHR returned status 200;
-- touch, canvas, local storage, application cache, WebSocket, geolocation, and
-  HTML audio/video interfaces are present;
-- Web Workers are absent;
-- the HTTP `Accept` catalogue includes JAR/JAD, Nokia widget, OMA, HTML/XML,
-  and OPML content types.
+Current gates may create clearly named disposable objects in ordinary user
+storage or local application databases when the exact object and cleanup are
+defined. They do not authorise:
 
-Presence of a browser interface or accepted content type is not proof of full
-standards conformance, codec support, permission success, or installability.
-
-## Reported working state
-
-The following is inherited from earlier hands-on work and is not yet backed by
-a fresh capture in this repository:
-
-- the phone boots and can be operated;
-- Wi-Fi has connected successfully;
-- power-saving mode was disabled during earlier testing;
-- USB mass-storage mode has worked;
-- several earlier interaction probes passed;
-- one earlier probe produced a visible brightness change or flash.
-
-These facts are useful starting evidence, not permission to assume the current
-state is identical.
-
-## Unknowns to resolve
-
-- exact product code and full Symbian build beyond the proven RM-626 firmware;
-- lock, developer-certificate, and software-installation state;
-- internal system-drive and removable-media layout beyond the proven 15 GiB
-  mass-memory partition;
-- additional USB personalities beyond the proven Mass storage and Nokia Suite
-  modes;
-- installed applications, patches, certificates, and user data worth keeping;
-- viable backup and recovery routes;
-- current browser/TLS limits and local-network capabilities.
-
-The restoration target is the E7's native Symbian experience. The working
-Field Deck is retained only as a reversible MTP/browser test fixture; it is not
-a proposed replacement shell. The handset-specific retain/repair/bridge/prune
-map and its evidence requirements are maintained in
-[`NATIVE-RESTORATION.md`](NATIVE-RESTORATION.md).
-
-The read-only visual census completed on 2026-08-23 additionally proved:
-
-- Nokia Belle Refresh and the existing firmware/custom-version family;
-- Browser 8.3, Flash 4.0, and Java 2.3 as reported by Device manager;
-- a broad native application grid spanning PIM, Office/PDF/ZIP, Maps, media,
-  capture/editing, synchronisation, and utilities;
-- four home-screen panels and a populated widget catalogue;
-- a short installed-package overlay and an empty pending-install queue;
-- installation policy set to `All`, online certificate checking `Off`, and no
-  default certificate-check web address;
-- a stale handset date of `27/07/2012`.
-
-The sanitised inventory is recorded in
-[`NATIVE-CENSUS.md`](NATIVE-CENSUS.md). The product code and raw videos remain
-private.
-
-## Historical toolkit evidence
-
-An earlier toolkit supplied on 2026-08-23 identifies the tested phone as
-RM-626 running firmware `111.040.1511`. Its receipt records a complete
-mass-memory preservation image. The private image location and checksum are
-deliberately excluded from this public repository.
-
-Its present integrity has not been freshly verified in this project. That does
-not block read-only interface enumeration, but the private image must be
-retrieved and verified—or a new preservation image made—before any destructive
-phone operation is considered.
-
-## Active gate
-
-The offline native launch pass completed on 2026-08-23 without an observed
-application crash. Clock, Calendar, Notes, Calculator, Dictionary, Files, ZIP,
-Adobe Reader, Microsoft Apps, and User guide reached their native interfaces;
-Files and ZIP browsed Mass memory, and User guide displayed its offline index.
-Microsoft Apps led to an account-dependent Office communications setup screen,
-not a local document browser.
-
-Native content probe v1 is host-verified and has passed on the handset by direct
-user observation. Files opens its plain-text fixture, Adobe Reader renders its
-conservative PDF 1.3 fixture, and ZIP manager handles its local Deflate archive.
-The returned toolkit matches the issued package SHA-256, but no generated MTP
-deployment report bundle was supplied; that evidence boundary is recorded in
-[`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
-
-Office-format fixtures remain deferred until a genuine local Office handler is
-identified; the Microsoft Apps account form is not one.
-
-The remaining core offline transactions have passed by direct user observation:
-alarm firing and cleanup, calendar entry persistence and cleanup, note
-save/edit/delete, calculator arithmetic, English dictionary lookup, and User
-guide search/topic opening. No network service or account was involved.
-
-The handset-originated capture/media gate has passed by direct user observation:
-still capture, Gallery viewing, photo editing, video capture/playback/editing,
-and voice recording/playback all work. This proves the native capture, media
-database, and handset-codec paths without external encoding variables.
-
-FM radio passes by direct user observation. HDMI/TV output is untested because
-no suitable mini-HDMI cable is available; this is a hardware blocker, not a
-failure and not evidence of a pass.
-
-Imported native-media probe v1 passed on the handset for JPEG display, MP3
-playback and the exercised Music-player controls, and H.264/AAC MP4 playback.
-Music player indexed the two tracks but displayed filenames instead of the
-embedded title/artist/album tags. The copied M3U opened in Files but did not
-register as a native playlist. Files could see the surviving metadata.
-
-The stock video player did not autorotate its playback surface. Autorotation
-works elsewhere on the handset, so this is a player-specific limitation rather
-than evidence of a failed orientation sensor.
-
-The E7's MTP responder advertises get/set track properties including artist,
-track number, genre, album name, album artist, duration, release date, and
-composer, plus native audio-album and audio/video-playlist object formats.
-libmtp's generic `mtp-sendfile` path used by v1 creates only a file object;
-libmtp's track-aware path explicitly supplies those properties and can create
-native album and playlist objects.
-
-The active gate is therefore the bounded track-aware deployment in
-[`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md). It reuses the byte-identical,
-known-good MP3 fixtures, writes explicit MTP track metadata, creates one native
-playlist object, and verifies the resulting host-visible MTP model before any
-Music-player judgement is made.
-
-
-
-
-## Evidence policy
-
-Raw captures may contain serial numbers, filesystem UUIDs, paths, SSIDs, or
-personal filenames. Keep them out of the public repository until reviewed and
-sanitised. Commit conclusions, hashes, and redacted evidence instead.
+- formatting or repartitioning;
+- firmware flashing;
+- manual writes into Symbian-managed private/system trees;
+- package installation or removal without a separate reviewed gate;
+- account creation or acceptance of paid/mobile connectivity;
+- deletion or overwrite of pre-existing phone objects.

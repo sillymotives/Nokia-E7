@@ -24,7 +24,23 @@ The read-only capture at `2026-08-23T19:06:16Z` proved:
 
 The raw capture remains private because it contains host and device identifiers.
 Version 1 of the capture script incompletely redacted the USB serial in two
-secondary inventories; version 2 corrects that defect.
+secondary inventories. Version 2 corrected those fields but missed serial text
+embedded in a tty `DEVLINKS` value. Version 3 applies a global 15-digit
+identifier redaction to udev output. Both affected captures remain private.
+
+The read-only Nokia Suite capture at `2026-08-23T19:14:49Z` additionally
+proved:
+
+- Suite-mode USB identity `0421:0335`, still reported as Nokia E7-00;
+- one 18-interface USB composite device operating at 480 Mbit/s;
+- `/dev/ttyACM0`, interface `01`, bound to `cdc_acm` and proven by udev as
+  Nokia vendor `0421`, model `0335`;
+- `/dev/ttyACM1`, interface `03`, with the same Nokia ownership proof;
+- `usbpn0`, backed by the `cdc_phonet` function and currently unmanaged by
+  NetworkManager;
+- an Imaging/PTP interface marked by udev as MTP-capable, although no host MTP
+  utility is currently installed;
+- no mass-storage block device in Nokia Suite mode.
 
 ## Reported working state
 
@@ -67,10 +83,12 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Switch the phone from Mass storage to Nokia Suite mode and run version 2 of the
-read-only host baseline. No AT command, flashing, formatting, firmware
-download, certificate replacement, system-file mutation, or installation is
-authorised by this gate.
+Run the targeted Suite identity probe. It may transmit only `AT`, `ATI`,
+`AT+CGMI`, `AT+CGMM`, and `AT+CGMR` to serial interfaces freshly proven by udev
+as Nokia E7 Suite-mode ports. No control AT command, flashing, formatting,
+firmware download, certificate replacement, system-file mutation, or
+installation is authorised by this gate.
+
 
 
 ## Evidence policy

@@ -42,6 +42,17 @@ proved:
   utility is currently installed;
 - no mass-storage block device in Nokia Suite mode.
 
+The allowlisted identity probe at `2026-08-23T19:21:20Z` freshly proved:
+
+- interface `01` (`/dev/ttyACM0` during that enumeration) is the responsive
+  standard AT information channel;
+- manufacturer `Nokia`, model `Nokia E7-00`, RM variant `RM-626`;
+- firmware `111.040.1511`, dated `2012-07-28`;
+- interface `03` (`/dev/ttyACM1` during that enumeration) returned no response
+  to `AT`, `ATI`, `AT+CGMI`, `AT+CGMM`, or `AT+CGMR`;
+- ModemManager was active, but the complete interface-01 exchange returned
+  clean `OK` responses.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -83,11 +94,10 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Run the targeted Suite identity probe. It may transmit only `AT`, `ATI`,
-`AT+CGMI`, `AT+CGMM`, and `AT+CGMR` to serial interfaces freshly proven by udev
-as Nokia E7 Suite-mode ports. No control AT command, flashing, formatting,
-firmware download, certificate replacement, system-file mutation, or
-installation is authorised by this gate.
+Run the targeted Suite capability probe on live interface `01`. It may transmit
+only its fixed status and capability-query allowlist. It may not read contact
+or message contents, send control AT commands, flash, format, download
+firmware, replace certificates, mutate system files, or install software.
 
 
 

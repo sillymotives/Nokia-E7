@@ -31,6 +31,8 @@ Every native subsystem is tracked as **retain**, **repair**, **bridge**, or
 **prune** in
 [`docs/NATIVE-RESTORATION.md`](docs/NATIVE-RESTORATION.md). Unverified items
 remain explicitly unknown until observed on this handset.
+The handset-specific visual inventory is recorded in
+[`docs/NATIVE-CENSUS.md`](docs/NATIVE-CENSUS.md).
 
 ## Engineering rules
 
@@ -47,9 +49,9 @@ remain explicitly unknown until observed on this handset.
 
 The safe host paths are established: USB identity, AT interrogation, guarded
 mass-memory access, reversible MTP transfer, and local Wi-Fi HTTP have all been
-proved. The active phase is now a read-only census of the actual native menu,
-installed applications, and built-in subsystem state. See
-[`docs/NATIVE-RESTORATION.md`](docs/NATIVE-RESTORATION.md) for the capture gate.
+proved. A read-only visual census of the native menu, installed applications,
+widgets, home screens, installation policy, and device information is also
+complete. The first native repair is the handset's stale system date and time.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

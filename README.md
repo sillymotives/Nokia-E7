@@ -49,6 +49,8 @@ The read-only mass-memory map and scoped write policy are recorded in
 [`docs/MASS-MEMORY.md`](docs/MASS-MEMORY.md).
 The proven MTP stores, transfer types, and mutation boundary are recorded in
 [`docs/MTP.md`](docs/MTP.md).
+The proven Wi-Fi/browser path and web-runtime capabilities are recorded in
+[`docs/WIFI-BROWSER.md`](docs/WIFI-BROWSER.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

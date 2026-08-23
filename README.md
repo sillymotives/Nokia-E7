@@ -10,6 +10,12 @@ hardware keyboard, camera, USB host support, and Symbian software ecosystem—
 while recovering as much practical modern functionality as the hardware and
 operating system can honestly support.
 
+This is a native-first restoration. The goal is to make the E7's built-in
+applications and hardware useful again, not to replace Symbian with a browser
+dashboard. Host services and local web pages are support infrastructure: they
+may bridge a dead remote service, deliver content, or test a capability, but
+they are not the device's primary interface.
+
 Likely workstreams include:
 
 - reliable Wi-Fi and local-network services;
@@ -20,6 +26,11 @@ Likely workstreams include:
 - terminal, scripting, SSH, Bluetooth, and USB-host possibilities;
 - backup, recovery, and reproducible installation records;
 - visual polish worthy of the hardware.
+
+Every native subsystem is tracked as **retain**, **repair**, **bridge**, or
+**prune** in
+[`docs/NATIVE-RESTORATION.md`](docs/NATIVE-RESTORATION.md). Unverified items
+remain explicitly unknown until observed on this handset.
 
 ## Engineering rules
 
@@ -34,10 +45,11 @@ Likely workstreams include:
 
 ## Current phase
 
-Phase 0 is read-only discovery. Start with
-[`scripts/e7-host-baseline.sh`](scripts/e7-host-baseline.sh) while the phone is
-connected by USB. The script does not mount, unmount, install, unlock, flash, or
-write to the E7.
+The safe host paths are established: USB identity, AT interrogation, guarded
+mass-memory access, reversible MTP transfer, and local Wi-Fi HTTP have all been
+proved. The active phase is now a read-only census of the actual native menu,
+installed applications, and built-in subsystem state. See
+[`docs/NATIVE-RESTORATION.md`](docs/NATIVE-RESTORATION.md) for the capture gate.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

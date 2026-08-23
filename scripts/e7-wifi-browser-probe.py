@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nokia E7 local Wi-Fi/browser capability probe, version 1.
+"""Nokia E7 local Wi-Fi/browser capability probe, version 2.
 
 Binds plain HTTP to one explicitly selected local IPv4 interface, serves a
 small old-browser-compatible page, records bounded request/capability evidence,
@@ -23,13 +23,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 
-SCRIPT_VERSION = "1"
+SCRIPT_VERSION = "2"
 DEFAULT_PORT = 8765
 MAX_WAIT_SECONDS = 600
 POST_ROOT_WAIT_SECONDS = 35
 POST_REPORT_WAIT_SECONDS = 5
 
-IPV4_RE = re.compile(r"(?<![0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9])")
 ID15_RE = re.compile(r"(?<![0-9])[0-9]{15}(?![0-9])")
 
 HTML = b"""<!DOCTYPE html>
@@ -106,9 +105,11 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def redact(value: str) -> str:
+def redact(value: str, ipv4_values: tuple[str, ...] = ()) -> str:
     value = ID15_RE.sub("[15-digit-id-redacted]", value)
-    return IPV4_RE.sub("[ipv4-redacted]", value)
+    for address in sorted(ipv4_values, key=len, reverse=True):
+        value = value.replace(address, "[ipv4-redacted]")
+    return value
 
 
 def local_interfaces() -> list[tuple[str, str, ipaddress.IPv4Network]]:
@@ -229,6 +230,9 @@ def make_handler(state: ProbeState, allowed_network: ipaddress.IPv4Network):
                 )
                 if self.headers.get(key) is not None
             }
+            selected_headers["Host"] = redact(
+                selected_headers.get("Host", ""), (str(self.server.server_address[0]),)
+            )
             state.record(self.path, client_ip, selected_headers, allowed)
             if not allowed:
                 self._send(403, "text/plain; charset=utf-8", b"Local subnet only.\n")
@@ -368,7 +372,8 @@ def main() -> int:
     if bind_ip not in available:
         choices = ", ".join(f"{iface}={ip}" for ip, iface, _network in interfaces) or "none"
         report.write_text(
-            f"REFUSED: selected/default IPv4 is not an active global interface. Choices: {redact(choices)}\n"
+            "REFUSED: selected/default IPv4 is not an active global interface. "
+            f"Choices: {redact(choices, tuple(available))}\n"
         )
         next_file.write_text("No listener was started. Rerun with --bind ADDRESS if appropriate.\n")
         bundle, checksum = package(start_dir, run_dir, run_name)
@@ -382,7 +387,7 @@ def main() -> int:
     try:
         server = HTTPServer((bind_ip, args.port), handler, bind_and_activate=True)
     except OSError as error:
-        report.write_text(f"REFUSED: listener failed: {redact(str(error))}\n")
+        report.write_text(f"REFUSED: listener failed: {redact(str(error), (bind_ip,))}\n")
         next_file.write_text("No listener was started.\n")
         bundle, checksum = package(start_dir, run_dir, run_name)
         print(f"PARTIAL: listener failed.\nBundle:   {bundle}\nChecksum: {checksum}")

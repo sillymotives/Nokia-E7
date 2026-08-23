@@ -10,8 +10,11 @@ Audited: 2026-08-23
 - Archive-path validation: no absolute paths or parent-directory traversal.
 - File types: regular files and directories only; no archived symlinks.
 
-The ZIP itself is not committed. Its text contents are preserved under
-`archive/nokia-e7-toolkit-20260805/`.
+The ZIP itself is not committed. The non-private serial-probe subset is
+preserved under `archive/nokia-e7-toolkit-20260805/`. The original toolkit
+README and `01-preserve-mass-memory.sh` are deliberately withheld because they
+contain a private backup filesystem path. Their behaviour is documented here
+without publishing that path or the attachment-derived files.
 
 ## Behavioural review
 

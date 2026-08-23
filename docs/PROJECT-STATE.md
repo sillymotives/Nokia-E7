@@ -53,6 +53,22 @@ The allowlisted identity probe at `2026-08-23T19:21:20Z` freshly proved:
 - ModemManager was active, but the complete interface-01 exchange returned
   clean `OK` responses.
 
+The fixed capability probe at `2026-08-23T19:25:58Z` proved:
+
+- `+CFUN: 0`: the cellular modem is in minimum-functionality mode;
+- `+CBC: 1,14`: the battery is connected, the handset is externally powered,
+  and 14% capacity was reported;
+- cellular signal was unknown/unavailable and SIM, registration, and operator
+  queries returned errors;
+- the AT character set is UTF-8;
+- SMS PDU and text syntaxes are implemented, but the exposed message-storage
+  lists are empty;
+- AT phonebook storage/read commands are not exposed;
+- keypad emulation and Nokia backlight control are implemented, with backlight
+  state `2` reported;
+- the command catalogue exposes a much larger cellular and manufacturer test
+  surface which remains unauthorised.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -94,10 +110,11 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Run the targeted Suite capability probe on live interface `01`. It may transmit
-only its fixed status and capability-query allowlist. It may not read contact
-or message contents, send control AT commands, flash, format, download
-firmware, replace certificates, mutate system files, or install software.
+Switch to Mass storage mode and run the guarded read-only filesystem census. It
+may mount only the freshly proven Nokia VFAT partition with
+`ro,nosuid,nodev,noexec`, record names and metadata, and unmount it. It may not
+read file contents, change filesystem metadata, flash, format, install, or
+write to the phone.
 
 
 

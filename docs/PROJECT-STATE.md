@@ -165,6 +165,22 @@ a proposed replacement shell. The handset-specific retain/repair/bridge/prune
 map and its evidence requirements are maintained in
 [`NATIVE-RESTORATION.md`](NATIVE-RESTORATION.md).
 
+The read-only visual census completed on 2026-08-23 additionally proved:
+
+- Nokia Belle Refresh and the existing firmware/custom-version family;
+- Browser 8.3, Flash 4.0, and Java 2.3 as reported by Device manager;
+- a broad native application grid spanning PIM, Office/PDF/ZIP, Maps, media,
+  capture/editing, synchronisation, and utilities;
+- four home-screen panels and a populated widget catalogue;
+- a short installed-package overlay and an empty pending-install queue;
+- installation policy set to `All`, online certificate checking `Off`, and no
+  default certificate-check web address;
+- a stale handset date of `27/07/2012`.
+
+The sanitised inventory is recorded in
+[`NATIVE-CENSUS.md`](NATIVE-CENSUS.md). The product code and raw videos remain
+private.
+
 ## Historical toolkit evidence
 
 An earlier toolkit supplied on 2026-08-23 identifies the tested phone as
@@ -181,11 +197,9 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Capture a read-only visual census of the handset's main menu, every application
-folder, full installed-application list, home-screen widgets, and complete
-device/software information. Do not expose personal content. This census will
-replace family-level assumptions with an exact installed inventory before any
-native application repair or reversible menu pruning begins.
+Correct the stale system date, time, and local time zone, then verify that they
+survive one normal shutdown/startup. Date-sensitive functions must not be
+diagnosed against a clock that is fourteen years behind.
 
 
 

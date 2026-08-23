@@ -43,6 +43,8 @@ Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
 The host-proven USB personalities and functions are mapped in
 [`docs/USB-INTERFACES.md`](docs/USB-INTERFACES.md).
+The bounded AT command evidence is recorded in
+[`docs/AT-CAPABILITIES.md`](docs/AT-CAPABILITIES.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

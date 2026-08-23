@@ -197,9 +197,10 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Correct the stale system date, time, and local time zone, then verify that they
-survive one normal shutdown/startup. Date-sensitive functions must not be
-diagnosed against a clock that is fourteen years behind.
+The corrected date, time, and Cardiff time zone survived a normal power cycle
+on 2026-08-23. Run the bounded native-only core application pass documented in
+[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md), including exact cleanup of
+its disposable alarm, calendar entry, and note.
 
 
 

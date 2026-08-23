@@ -95,23 +95,37 @@ of a failed orientation sensor.
   Transport, Web TV, and obsolete support links remain prune/bridge candidates
   after their useful local dependencies are separated from retired services.
 
-## Active gate: integrated GPS and offline Maps v1
+## GPS and Maps result
 
-The next sequence isolates the integrated satellite receiver from assisted
-positioning, network positioning, map downloads, and retired Nokia services.
-It then checks local map rendering and favourite persistence separately.
+The positioning settings expose Assisted GPS, Integrated GPS, Bluetooth GPS,
+Wi-Fi/Network, and Network based methods. Integrated GPS was isolated, but Maps
+stopped at a missing-street-maps screen and exited when that screen was
+dismissed. No separate GPS Data, Location, or Landmarks front end was found.
+Camera explicitly reports that location is unavailable in Offline mode.
 
 The mass-memory census found Maps catalogue/icon scaffolding but no substantial
-offline map region. A satellite fix with missing street tiles would therefore
-be a valid split result: retain the receiver and repair offline content later.
+offline map region. Missing map data and the Offline-profile location boundary
+are therefore tracked separately.
+
+## Active gate: first controlled system-state write
+
+The guarded General-mode trial first proves the exact E7 AT interface, runtime
+CFUN 0, support for values 0 and 1, absent SIM context, and no active cellular
+registration. Its apply path may transmit exactly `AT+CFUN=1`; its rollback
+path may transmit exactly `AT+CFUN=0`. Both use read-back. Neither sends a reset
+or persistent-profile command or writes phone files or firmware.
+
+The trial tests whether full runtime modem functionality releases Belle from
+Offline mode. It does not assume that the AT state and visible profile are
+identical. Follow [`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
 
 Follow [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
 
 ## Mutation policy
 
 Current gates may create clearly named disposable objects in ordinary user
-storage or local application databases when the exact object and cleanup are
-defined. They do not authorise:
+storage or make an explicitly documented, read-back-verified runtime state
+change with an exact rollback. They do not authorise:
 
 - formatting or repartitioning;
 - firmware flashing;

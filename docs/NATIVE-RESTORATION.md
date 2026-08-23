@@ -50,7 +50,7 @@ guide is not proof of the installed state or behaviour of firmware
 | Music player and playlists | Retain | Imported MP3 playback and the exercised player controls work. A track-aware MTP object exposed Alpha and a native MTP playlist registered successfully. Beta did not appear through that particular ingest probe, but this non-blocking content-transfer quirk does not diminish the useful native player. |
 | Video player and Web TV | Retain / Prune | Handset-captured and imported H.264/AAC video playback work. The player does not autorotate even though system rotation works elsewhere; treat that as a local player limitation. Legacy Web TV catalogues are likely prune candidates. |
 | HDMI/TV output | Blocked: test hardware | No suitable mini-HDMI cable is available. There is no failure evidence; defer physical verification rather than inferring a pass. |
-| Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Preserve native Maps if GPS and offline map data work. Online search, traffic, and account functions may need offline data or a bridge. |
+| Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Maps stops at a missing-street-maps screen and exits when it is dismissed. Offline mode blocks Camera location, so the integrated receiver cannot yet be isolated. Test runtime full functionality first; offline map data remains a separate repair. |
 | Wi-Fi and browser | Retain / Bridge | Local HTTP, CSS, JavaScript, XHR, and storage are proven. Use the browser as infrastructure only where no meaningful native client exists. |
 | Mail | Repair / Bridge | Test direct IMAP/SMTP/TLS first; if protocol or certificate limits block it, translate on the trusted LAN while retaining native Mail. |
 | Bluetooth and Phone switch | Retain | Verify pairing, object push, audio profiles, keyboard/tether roles, and device-to-device transfer. |
@@ -151,20 +151,31 @@ absence remains a non-blocking transfer/library-ingestion observation. The
 generated host report was not supplied, so no stronger transport-layer claim
 is made. Full interpretation is in [`NATIVE-MUSIC-V2.md`](NATIVE-MUSIC-V2.md).
 
-## Active gate: integrated GPS and offline Maps v1
+## Partial gate: integrated GPS and offline Maps v1
 
-The next gate isolates the integrated GNSS receiver from assisted positioning
-and retired Nokia services, then checks whether any useful offline map content
-is already present. Follow [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
+The handset exposed the expected positioning-method families, and Integrated
+GPS was isolated from Assisted GPS, Bluetooth GPS, Wi-Fi/Network, and Network
+based methods. Maps then stopped at its missing-street-maps screen and exited
+when that screen was dismissed. No separate GPS Data, Location, or Landmarks
+front end was found. Camera states that location is unavailable in Offline
+mode. Detailed observations are in [`GPS-MAPS-V1.md`](GPS-MAPS-V1.md).
 
 The mass-memory census found only Nokia Maps catalogue/icon scaffolding, not a
-substantial offline map payload. A successful satellite fix and absent street
-tiles are therefore separate, compatible results: retain the receiver and
-repair map content later.
+substantial offline map payload. The missing tiles and the Offline-profile
+location block remain separate problems.
 
-This gate permits adding and removing clearly named test media in ordinary user
-storage. It does not permit deleting pre-existing media, installing codecs,
-accepting network services, or changing system files.
+## Active gate: guarded General-mode runtime trial v1
+
+The first authorised system-state write is deliberately narrow. After proving
+the exact E7 interface, current CFUN 0, supported values, absent SIM context,
+and no active cellular registration, the helper may send exactly
+`AT+CFUN=1`. It then reads the state back and rechecks the cellular boundary.
+The paired rollback sends exactly `AT+CFUN=0`.
+
+This trial may expose General mode, or it may show that Belle's Offline policy
+lives above the modem-functionality layer. It sends no reset or persistent
+profile command and does not touch phone files or firmware. Follow
+[`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

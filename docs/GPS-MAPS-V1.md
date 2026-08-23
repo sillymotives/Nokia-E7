@@ -81,6 +81,24 @@ Loader yet. Those mix local Maps behaviour with remote dependencies.
 - **Favourite persists:** local Maps data storage is functional regardless of
   online service status.
 
+## Observed result
+
+The handset exposed Assisted GPS, Integrated GPS, Bluetooth GPS,
+Wi-Fi/Network, and Network based methods. For the isolated attempt, Integrated
+GPS was left enabled and the other methods were disabled.
+
+Maps did not expose a position view. It stopped at a `Street maps` screen
+reporting that new street maps were required; dismissing that screen exited the
+application. A search of the installed application surfaces did not find a
+separate GPS Data, Location, or Landmarks front end. Camera's location setting
+then supplied the decisive policy clue: location is not supported while the
+phone is in Offline mode.
+
+The absent street-map payload remains a separate repair problem, but Offline
+mode now blocks a clean integrated-GPS test before map rendering can be judged.
+The next bounded experiment is the runtime functionality trial in
+[`GENERAL-MODE-TRIAL-V1.md`](GENERAL-MODE-TRIAL-V1.md).
+
 ## Evidence basis
 
 The Nokia E7-00 Nokia Belle user guide documents Maps, positioning, favourites,

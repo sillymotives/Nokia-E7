@@ -63,7 +63,10 @@ mini-HDMI cable. Music player is **Retain**: imported playback and controls
 work, track-aware MTP exposed Alpha, and a native playlist registered. Beta's
 absence in that particular ingest probe is a non-blocking transfer quirk. The
 video player also has a local no-autorotation quirk despite healthy system
-rotation elsewhere. Integrated GPS and offline Maps are now the active gate.
+rotation elsewhere. Maps is missing its street-map payload, and Offline mode
+blocks Camera location. The active gate is therefore the first controlled
+system-state write: a guarded, runtime-only full-functionality trial with an
+exact rollback.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -85,6 +88,8 @@ The track-aware MTP metadata and native-playlist follow-up is recorded in
 [`docs/NATIVE-MUSIC-V2.md`](docs/NATIVE-MUSIC-V2.md).
 The integrated-GPS and offline-Maps isolation sequence is recorded in
 [`docs/GPS-MAPS-V1.md`](docs/GPS-MAPS-V1.md).
+The guarded runtime General-mode experiment and rollback are recorded in
+[`docs/GENERAL-MODE-TRIAL-V1.md`](docs/GENERAL-MODE-TRIAL-V1.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

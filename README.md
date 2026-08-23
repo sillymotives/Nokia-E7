@@ -54,7 +54,9 @@ widgets, home screens, installation policy, and device information is also
 complete. The stale system date, time, and Cardiff time zone have been repaired
 and survived a normal power cycle. The controlled PDF/ZIP/text probe has passed
 on the handset, establishing Files, Adobe Reader, and ZIP manager as useful
-native local-content paths.
+native local-content paths. The core alarm, calendar, notes, calculator,
+dictionary, and offline User guide transactions also pass. Native capture and
+media are the current restoration gate.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

@@ -214,9 +214,15 @@ deployment report bundle was supplied; that evidence boundary is recorded in
 Office-format fixtures remain deferred until a genuine local Office handler is
 identified; the Microsoft Apps account form is not one.
 
-The active gate is now the remaining core offline transactions: alarm,
-calendar, note, calculator, dictionary lookup, and User guide search. Each test
-uses disposable local state and requires no network service.
+The remaining core offline transactions have passed by direct user observation:
+alarm firing and cleanup, calendar entry persistence and cleanup, note
+save/edit/delete, calculator arithmetic, English dictionary lookup, and User
+guide search/topic opening. No network service or account was involved.
+
+The active gate is now native capture and media. Start with disposable media
+created by the handset itself: still camera and gallery, photo editor, video
+capture/playback/editor, and voice recording/playback. Music, FM radio, and
+physical outputs follow once these native source paths are established.
 
 
 

@@ -37,9 +37,9 @@ guide is not proof of the installed state or behaviour of firmware
 | Native area | Candidate treatment | Current evidence and restoration question |
 | --- | --- | --- |
 | Home screen, profiles, themes, notification light, device search | Retain | Core native shell; confirm current widgets, shortcuts, profiles, and dead service prompts. |
-| Clock, alarms, calendar | Retain | High-value offline PIM; test alarms, recurring entries, time zone handling, and local backup/export. |
+| Clock, alarms, calendar | Retain | Correct time survives reboot; alarm firing/cleanup and calendar entry persistence/cleanup work. Recurrence and export remain later tests. |
 | Contacts | Retain / Bridge | Keep the native database; determine safe import/export and whether CardDAV must be translated through a host. |
-| Notes, calculator, dictionary | Retain | High-value offline tools; complete their transactional tests and storage/export checks. |
+| Notes, calculator, dictionary | Retain | Note save/edit/delete, prescribed arithmetic, and local English lookup all work. Export and extra language packs remain optional. |
 | ZIP manager | Retain | A controlled local Deflate archive works; archive creation remains unproved. |
 | PDF reader | Retain | A conservative local PDF 1.3 fixture renders correctly; establish complexity and performance limits later. |
 | Local Office handler | Unknown / Repair | MTP advertises legacy Office object types, but Microsoft Apps exposes an account setup surface rather than a local browser. Identify a genuine handler before testing documents. |
@@ -99,13 +99,29 @@ The user completed the on-device check on 2026-08-23 and reports that the text,
 PDF, and ZIP fixtures all work correctly. Files, Adobe Reader, and ZIP manager
 are now retain candidates backed by local-content use, not merely launch tests.
 
-## Active gate: core local transactions
+## Completed gate: core local transactions
 
-Complete the still-open offline transactions in
-[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md): alarm firing and cleanup,
-calendar entry persistence and cleanup, note persistence/edit/delete,
-calculator arithmetic, dictionary lookup, and User guide search. These actions
-remain local, disposable, and independent of retired services.
+The sequence in [`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md) comprised alarm
+firing and cleanup, calendar entry persistence and cleanup, note
+persistence/edit/delete, calculator arithmetic, dictionary lookup, and User
+guide search. Every action was local, disposable, and independent of retired
+services.
+
+The user completed this sequence on 2026-08-23 and reported that all six areas
+work. Clock, Calendar, Notes, Calculator, Dictionary, and User guide therefore
+have transaction-level or functional local evidence rather than launch-only
+evidence.
+
+## Active gate: native capture and media
+
+Exercise the native camera, gallery, photo editor, video capture/player/editor,
+voice recorder, music player, FM radio, and available physical outputs. Begin
+with disposable camera, video, and audio captures so the handset itself creates
+known-good media before introducing external codec variables.
+
+This gate permits creating and deleting clearly named disposable media in
+ordinary user storage. It does not permit deleting pre-existing media,
+installing codecs, accepting network services, or changing system files.
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

@@ -96,16 +96,16 @@ server. No tested application crashed.
 
 | Native area | Result | Fresh evidence | Still unproved |
 | --- | --- | --- | --- |
-| Clock | Pass: launch/config | Correct date and Cardiff GMT+1 were shown; no alarms existed. | Alarm creation, firing, and cleanup. |
-| Calendar | Pass: launch | August 2026 opened with 23 August selected. | Entry create, persist, reopen, and delete. |
-| Notes | Pass: launch | The native `Create note` editor opened. | Text entry, persistence, editing, and delete. |
-| Calculator | Pass: launch | The full native calculator opened. | Arithmetic transaction. |
-| Dictionary | Partial | English-to-English mode opened; English is installed and the UI offered additional language downloads. | A definition lookup and whether its English data is populated. |
+| Clock | Pass: transaction | Correct date and Cardiff GMT+1 were shown; the user confirms that alarm creation, firing, dismissal, and cleanup work. | Recurring alarms and power-off wake behaviour. |
+| Calendar | Pass: transaction | August 2026 opened correctly; the user confirms that entry creation, persistence, reopening, and cleanup work. | Recurrence, export, and synchronisation. |
+| Notes | Pass: transaction | The native editor opened; the user confirms that save, reopen, edit, and delete all work. | Export and synchronisation. |
+| Calculator | Pass: transaction | The native calculator opened and the user confirms that the prescribed arithmetic transaction works. | None for basic offline use. |
+| Dictionary | Pass: local lookup | English-to-English mode opened and the user confirms that a definition lookup works. | Additional language installation. |
 | Files | Pass: local open | Phone memory and Mass memory were browsed; the user reports that the deployed v1 plain-text fixture opens correctly. | File create/rename/delete through the native manager. |
 | ZIP | Pass: local archive | ZIP manager browsed Mass memory, and the user reports that the controlled v1 Deflate archive works correctly. | Creating a new archive on the handset. |
 | Adobe Reader | Pass: local render | Its document browser opened, and the user reports that the controlled one-page PDF 1.3 fixture works correctly. | More complex PDFs and performance limits. |
 | Microsoft Apps | Partial: service-bound | It opened an account form for Office mail, documents, calendar, contacts, and instant messaging. | Endpoint compatibility; no credentials or network were used. |
-| User guide | Pass: offline index | The full offline topic index opened, including Office and Connectivity sections. | Search and individual topic rendering. |
+| User guide | Pass: offline search | The full offline topic index opened, and the user confirms that search and topic opening work. | None for basic offline use. |
 
 This establishes a broad, stable local application surface. It does not prove
 that any historical Nokia, Ovi, Microsoft, news, weather, social, or map server
@@ -121,3 +121,13 @@ evidence boundary are documented in
 Representative Office documents are deferred until a local Office handler is
 identified. The visible Microsoft Apps launcher is an account-dependent setup
 surface and is not itself evidence that such a handler is installed.
+
+## Core transaction completion
+
+Completed: 2026-08-23
+
+The user subsequently completed the remaining offline transaction sequence and
+reported that every item works: alarm firing and cleanup, calendar persistence
+and cleanup, note save/edit/delete, calculator arithmetic, English dictionary
+lookup, and User guide search/topic opening. These are direct handset
+observations; no network service or account was involved.

@@ -11,7 +11,7 @@ export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 umask 077
 
-readonly SCRIPT_VERSION="2"
+readonly SCRIPT_VERSION="2.1"
 readonly FOLDER_NAME="KAI-MUSIC-V2"
 readonly ALBUM_NAME="E7 Native Music V2"
 readonly PLAYLIST_NAME="KAI Playlist V2"
@@ -142,7 +142,7 @@ declare -a track_verified=("0" "0")
     say "Payload policy: send only two fixed, hash-allowlisted MP3 files"
     say "Persistence: successful objects are deliberately left on the phone"
 
-    for required in awk basename cmp date find fuser grep gzip id lsusb \
+    for required in awk basename cmp date find grep gzip id lsusb \
         mtp-albums mtp-detect mtp-folders mtp-getfile mtp-newfolder \
         mtp-newplaylist mtp-playlists mtp-sendtr mtp-tracks sed sha256sum \
         tar timeout tr udevadm wc; do
@@ -235,11 +235,13 @@ declare -a track_verified=("0" "0")
         fi
     fi
 
-    if ((run_status == 0)); then
+    if ((run_status == 0)) && have fuser; then
         owners="$(fuser "$usb_node" 2>/dev/null || true)"
         if [[ -n "$owners" ]]; then
             set_failure 11 "REFUSED: the Nokia USB node is open by process(es): $owners"
         fi
+    elif ((run_status == 0)); then
+        say "INFO: fuser is absent; optional USB-node ownership check skipped."
     fi
 
     if ((run_status == 0)); then

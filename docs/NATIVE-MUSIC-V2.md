@@ -53,6 +53,10 @@ It verifies both source hashes, creates one folder, sends only the two fixed
 tracks, retrieves each returned track object and compares it byte-for-byte,
 verifies the explicit MTP metadata, creates the native playlist, and verifies
 its name, parent, membership, and order. It deletes and overwrites nothing.
+When `fuser` is available, the script also refuses a USB node held open by
+another process. Its absence is reported and skips only that optional
+supplementary check; the device identity, sole-MTP-candidate, GVFS, store, and
+object preflight checks remain mandatory.
 
 Successful objects deliberately remain on the phone. A partial run may also
 leave the clearly named folder, tracks, album, or playlist; the report lists

@@ -59,7 +59,8 @@ dictionary, and offline User guide transactions also pass. Native capture and
 media also pass end-to-end: stills, Gallery, photo editing, video
 capture/playback/editing, and voice recording/playback. Imported media, Music
 player behaviour, FM radio, and physical output are the current restoration
-gate.
+gate. FM radio now passes; HDMI is deferred for lack of a mini-HDMI cable, while
+imported media and Music-player behaviour remain active tests.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -75,6 +76,8 @@ The proven Wi-Fi/browser path and web-runtime capabilities are recorded in
 [`docs/WIFI-BROWSER.md`](docs/WIFI-BROWSER.md).
 The guarded local-content deployment and on-device pass conditions are recorded
 in [`docs/NATIVE-CONTENT-V1.md`](docs/NATIVE-CONTENT-V1.md).
+The imported JPEG/MP3/M3U/MP4 compatibility pack and Music-player test sequence
+are recorded in [`docs/NATIVE-MEDIA-V1.md`](docs/NATIVE-MEDIA-V1.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

@@ -224,10 +224,19 @@ still capture, Gallery viewing, photo editing, video capture/playback/editing,
 and voice recording/playback all work. This proves the native capture, media
 database, and handset-codec paths without external encoding variables.
 
-The active gate is now imported media, Music player/library behaviour, FM radio
-with a wired-headset antenna, and available HDMI/TV output. Conservative,
-hash-recorded media fixtures should be introduced through the proven MTP path
-before broader codec limits are explored.
+FM radio passes by direct user observation. HDMI/TV output is untested because
+no suitable mini-HDMI cable is available; this is a hardware blocker, not a
+failure and not evidence of a pass.
+
+Imported native-media probe v1 is built and host-verified. It contains a
+baseline JPEG, two tagged 44.1 kHz stereo 128 kb/s CBR MP3 tracks, an extended
+M3U playlist, and a 640x360 H.264 Constrained-Baseline/AAC-LC MP4. Every stream
+fully decodes on the host, and the visual fixtures have been inspected.
+
+Its guarded MTP deployment passed clean-transfer, existing-folder refusal, and
+tampered-payload refusal simulations. The active device gate is the on-device
+sequence in [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md): Gallery, Music player
+metadata/library/playlist/background behaviour, and imported video playback.
 
 
 

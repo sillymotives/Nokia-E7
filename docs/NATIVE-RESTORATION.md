@@ -46,8 +46,10 @@ guide is not proof of the installed state or behaviour of firmware
 | File manager and device search | Retain | Files browses Mass memory and opens the controlled plain-text fixture; indexed search and local mutations remain unproved. |
 | Camera, Photos, image editor, video editor | Retain | Still and video capture, Gallery display, native playback, photo editing, and video editing all work by direct user observation. Autofocus/flash modes, geotagging choices, and export remain later detail tests. |
 | Recorder | Retain | Native audio recording and playback work by direct user observation. Format/export limits remain later tests. |
-| Music player, playlists, FM radio | Retain / Repair | MTP transport formats are known; imported playback, library refresh, playlists/tags, and the FM headset-antenna path remain unproved. |
-| Video player, HDMI/TV output, Web TV | Retain / Prune | Handset-captured local video playback works. Imported codec limits and physical output remain unproved; legacy Web TV catalogues are likely prune candidates. |
+| FM radio | Retain | The user confirms that native FM reception works. Station memory and RDS are optional later detail tests. |
+| Music player and playlists | Retain / Repair | MTP transport formats are known; imported playback, library refresh, playlists/tags, repeat/shuffle, and background playback remain unproved. |
+| Video player and Web TV | Retain / Prune | Handset-captured local video playback works. Imported codec limits remain unproved; legacy Web TV catalogues are likely prune candidates. |
+| HDMI/TV output | Blocked: test hardware | No suitable mini-HDMI cable is available. There is no failure evidence; defer physical verification rather than inferring a pass. |
 | Maps, GPS, favourites, drive/walk navigation | Repair / Bridge | Preserve native Maps if GPS and offline map data work. Online search, traffic, and account functions may need offline data or a bridge. |
 | Wi-Fi and browser | Retain / Bridge | Local HTTP, CSS, JavaScript, XHR, and storage are proven. Use the browser as infrastructure only where no meaningful native client exists. |
 | Mail | Repair / Bridge | Test direct IMAP/SMTP/TLS first; if protocol or certificate limits block it, translate on the trusted LAN while retaining native Mail. |
@@ -122,12 +124,23 @@ all capture, viewing, editing, recording, and playback paths work.
 This establishes the handset's own codecs and media-database paths without
 introducing external encoding variables.
 
-## Active gate: imported media, radio, and physical output
+## Partial gate: radio and physical output
 
-Test conservative imported audio, image, and video fixtures through MTP, then
-verify Music player library refresh, metadata, playlists, repeat/shuffle, and
-background playback. Test FM radio with a wired 3.5 mm headset acting as the
-antenna. Test HDMI/TV output only if an appropriate cable and display are
+The user reports that FM radio works. HDMI/TV output is untested because no
+suitable mini-HDMI cable is available. This is a test-hardware blocker, not a
+device failure and not evidence of a pass.
+
+## Active gate: imported media and Music player
+
+Imported native-media probe v1 is built and host-verified with baseline JPEG,
+two tagged CBR MP3 tracks, extended M3U, and H.264 Constrained-Baseline/AAC-LC
+MP4 fixtures. Its guarded MTP deployment verifies every source hash, retrieves
+every created object, and compares every retrieval byte-for-byte. Deploy and
+test it according to [`NATIVE-MEDIA-V1.md`](NATIVE-MEDIA-V1.md).
+
+Verify Music player library refresh, metadata, playlists, repeat/shuffle, and
+background playback, plus Gallery indexing and imported image/video playback.
+HDMI/TV output remains deferred until an appropriate cable and display are
 available.
 
 This gate permits adding and removing clearly named test media in ordinary user

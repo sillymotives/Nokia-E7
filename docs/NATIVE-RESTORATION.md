@@ -57,25 +57,23 @@ guide is not proof of the installed state or behaviour of firmware
 | Telephone, SMS/MMS, voicemail, cellular widgets | Prune | Cellular service is out of scope. Preserve emergency/recovery behaviour; remove distractions only through reversible UI changes first. |
 | Nokia/Ovi account, Store, Ovi Music, Social, obsolete support links | Prune / Bridge selectively | Assume nothing from age alone. Test only if a native workflow remains valuable; otherwise hide dead entry points and prevent connection churn. |
 
-## Active gate: native UI census
+## Completed gate: native UI census
 
-No phone write is required. Capture clear photos or screenshots of:
+The menu, settings families, installed-package list, installation policy,
+widget catalogue, four home-screen panels, and complete software-information
+screen were captured on 2026-08-23. Sanitised findings are recorded in
+[`NATIVE-CENSUS.md`](NATIVE-CENSUS.md).
 
-1. every page of the main application menu;
-2. every application folder opened, including any hidden or rarely used folder;
-3. the complete installed-application/Application manager list, from top to
-   bottom;
-4. the home-screen pages and their current widgets;
-5. the device/software information screen showing the product code and full
-   software version if available.
+## Active gate: establish trustworthy device time
 
-Avoid opening accounts, messages, contacts, calendar entries, or other screens
-that expose personal data. A slow video scrolling through the menus is also
-acceptable if every label stays readable.
+The home-screen clock showed `27/07/2012`. Correct the date, time, and local
+time zone manually, then prove that they survive a normal power cycle. Do not
+judge TLS, mail, certificates, Maps networking, or signed content while the
+device clock is wrong.
 
-This capture will turn the family-level matrix into a handset-specific one and
-choose the first built-in subsystem test. No removal, reset, format, firmware
-flash, certificate change, or installation is authorised by this gate.
+This gate authorises only the ordinary date, time, time-zone, and automatic-time
+settings plus one normal shutdown/startup. It does not authorise reset, format,
+firmware flashing, package installation, or component removal.
 
 ## First test order after census
 

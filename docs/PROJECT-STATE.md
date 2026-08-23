@@ -59,9 +59,11 @@ original mass-memory image of exactly `16,076,767,232` bytes with SHA-256:
 
 `b5dd4b7e07afec8e0648ad40dfef37ef78a4e7b37d05382e5a4818728a071dfa`
 
-That receipt proves what the earlier run reported, but the image's present
-location and current integrity must be verified before it is treated as an
-available recovery artifact.
+The user confirms that this preservation image is stored on the Acer, not on
+the current `niggacentre` host. Its present integrity has therefore not been
+freshly verified in this project. That does not block read-only interface
+enumeration, but the image must be retrieved and verified—or a new preservation
+image made—before any destructive phone operation is considered.
 
 ## Active gate
 

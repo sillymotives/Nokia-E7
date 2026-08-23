@@ -122,6 +122,7 @@ set, a permissive-looking installation policy, no staged installers, four
 working home screens, and a small installed-package overlay. Native-first
 restoration is practical.
 
-The immediate gate is to correct the system date, time, and local time zone,
-then verify that they survive a normal power cycle. Only after that should TLS,
-mail, certificates, Maps networking, or software-install behaviour be judged.
+The system date, time, and Cardiff time zone were corrected and survived a
+normal power cycle on 2026-08-23. Trustworthy device time is therefore proven.
+The next gate is the native-only core application pass in
+[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md).

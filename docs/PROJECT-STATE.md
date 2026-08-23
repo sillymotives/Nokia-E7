@@ -159,6 +159,12 @@ state is identical.
 - viable backup and recovery routes;
 - current browser/TLS limits and local-network capabilities.
 
+The restoration target is the E7's native Symbian experience. The working
+Field Deck is retained only as a reversible MTP/browser test fixture; it is not
+a proposed replacement shell. The handset-specific retain/repair/bridge/prune
+map and its evidence requirements are maintained in
+[`NATIVE-RESTORATION.md`](NATIVE-RESTORATION.md).
+
 ## Historical toolkit evidence
 
 An earlier toolkit supplied on 2026-08-23 identifies the tested phone as
@@ -175,12 +181,11 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Deploy a small self-contained HTML field deck to a new ordinary `KAI` folder on
-Mass memory using the verified MTP path. Retrieve the deployed object and
-verify its SHA-256 before leaving it in place. Then open `KAI/INDEX.HTM`
-manually on the phone to test local-file rendering and local-storage behaviour.
-The deployment may not touch Phone memory, existing objects, Symbian-managed
-trees, device properties, formatting, reset, or installation state.
+Capture a read-only visual census of the handset's main menu, every application
+folder, full installed-application list, home-screen widgets, and complete
+device/software information. Do not expose personal content. This census will
+replace family-level assumptions with an exact installed inventory before any
+native application repair or reversible menu pruning begins.
 
 
 

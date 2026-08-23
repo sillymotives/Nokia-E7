@@ -104,6 +104,17 @@ The advertised format list is a transfer/object capability catalogue, not
 proof that every codec or document feature renders on the phone. The responder
 also advertises destructive operations; none were executed by this probe.
 
+The bounded MTP transaction at `2026-08-23T19:50:01Z` then proved:
+
+- explicit selection of the Mass memory store;
+- creation of one uniquely named root folder and one 52-byte text object;
+- successful retrieval with a byte-for-byte and SHA-256 match;
+- deletion of only the exact file and folder object IDs returned at creation;
+- no test-folder residue after cleanup.
+
+MTP is therefore a verified bidirectional payload and retrieval path, not just
+an advertised interface.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -147,12 +158,11 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Run one bounded MTP round trip against the explicitly proven read/write Mass
-memory store. It may create one uniquely named root folder, upload one tiny
-text file, retrieve and hash that exact returned file object, and delete only
-the file and folder object IDs returned by those creation commands. It may not
-touch Phone memory, existing objects, device properties, formatting, reset,
-installation, or vendor data-store operations.
+Run a host-side plain-HTTP probe on the local network and visit it manually from
+the E7 over Wi-Fi. It may record the browser request headers and a bounded
+JavaScript capability report. It may not alter network settings, install a
+certificate, expose the listener beyond the local host interfaces, download
+external content, or write to the phone.
 
 
 

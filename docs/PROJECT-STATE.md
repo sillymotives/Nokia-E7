@@ -162,7 +162,8 @@ Run a host-side plain-HTTP probe on the local network and visit it manually from
 the E7 over Wi-Fi. It may record the browser request headers and a bounded
 JavaScript capability report. It may not alter network settings, install a
 certificate, expose the listener beyond the local host interfaces, download
-external content, or write to the phone.
+external content, or make a deliberate payload/configuration write. Ordinary
+browser history or session state may change when the page is visited.
 
 
 

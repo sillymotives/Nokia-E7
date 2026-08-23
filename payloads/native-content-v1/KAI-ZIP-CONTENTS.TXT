@@ -1,0 +1,11 @@
+KAI ZIP TEST V1
+
+PASS CONDITION:
+The native ZIP application opens KAI-ZIP-PROBE.ZIP and displays this file.
+
+Optional extraction condition:
+Extract this file, open the extracted copy, and confirm this sentence remains
+readable.
+
+No network connection is required.
+

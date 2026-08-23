@@ -1,0 +1,145 @@
+%PDF-1.3
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/Contents 8 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 7 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+5 0 obj
+<<
+/PageMode /UseNone /Pages 7 0 R /Type /Catalog
+>>
+endobj
+6 0 obj
+<<
+/Author (Nokia E7 resurrection project) /CreationDate (D:20000101000000+00'00') /Creator (anonymous) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (Offline PDF compatibility fixture) /Title (KAI Nokia E7 Adobe Reader Probe V1) /Trapped /False
+>>
+endobj
+7 0 obj
+<<
+/Count 1 /Kids [ 4 0 R ] /Type /Pages
+>>
+endobj
+8 0 obj
+<<
+/Length 2704
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+.090196 .196078 .301961 rg
+n 0 723.8898 595.2756 118 re f*
+1 1 1 rg
+BT /F2 22 Tf 26.4 TL ET
+BT 1 0 0 1 48 773.8898 Tm (Nokia E7 Native PDF Test) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 48 751.8898 Tm (KAI compatibility fixture v1 - offline and server-free) Tj T* ET
+.090196 .196078 .301961 rg
+BT /F2 14 Tf 16.8 TL ET
+BT 1 0 0 1 48 679.8898 Tm (PASS condition) Tj T* ET
+.337255 .396078 .45098 rg
+BT /F1 11 Tf 13.2 TL ET
+BT 1 0 0 1 48 651.8898 Tm (Adobe Reader opens this page without an activation or network prompt.) Tj T* ET
+BT 1 0 0 1 48 633.8898 Tm (The title, blue table, alphabet, digits, and footer are all legible.) Tj T* ET
+BT 1 0 0 1 48 615.8898 Tm (Page navigation reports one page and zooming does not corrupt the layout.) Tj T* ET
+.917647 .94902 .972549 rg
+n 48 547.8898 499.2756 34 re f*
+.176471 .45098 .72549 RG
+n 48 547.8898 499.2756 34 re S
+n 198 547.8898 m 198 581.8898 l S
+.090196 .196078 .301961 rg
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 58 559.8898 Tm (Document) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 208 559.8898 Tm (KAI-ADOBE-PROBE.PDF) Tj T* ET
+.972549 .980392 .988235 rg
+n 48 513.8898 499.2756 34 re f*
+.176471 .45098 .72549 RG
+n 48 513.8898 499.2756 34 re S
+n 198 513.8898 m 198 547.8898 l S
+.090196 .196078 .301961 rg
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 58 525.8898 Tm (Format) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 208 525.8898 Tm (PDF 1.3, one page, standard Helvetica) Tj T* ET
+.917647 .94902 .972549 rg
+n 48 479.8898 499.2756 34 re f*
+.176471 .45098 .72549 RG
+n 48 479.8898 499.2756 34 re S
+n 198 479.8898 m 198 513.8898 l S
+.090196 .196078 .301961 rg
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 58 491.8898 Tm (Target) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 208 491.8898 Tm (Nokia E7-00 / Belle Refresh) Tj T* ET
+.972549 .980392 .988235 rg
+n 48 445.8898 499.2756 34 re f*
+.176471 .45098 .72549 RG
+n 48 445.8898 499.2756 34 re S
+n 198 445.8898 m 198 479.8898 l S
+.090196 .196078 .301961 rg
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 58 457.8898 Tm (Network) Tj T* ET
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 208 457.8898 Tm (Not required) Tj T* ET
+.090196 .196078 .301961 rg
+BT /F2 12 Tf 14.4 TL ET
+BT 1 0 0 1 48 403.8898 Tm (Glyph check) Tj T* ET
+.337255 .396078 .45098 rg
+BT /F1 11 Tf 13.2 TL ET
+BT 1 0 0 1 48 379.8898 Tm (ABCDEFGHIJKLMNOPQRSTUVWXYZ) Tj T* ET
+BT 1 0 0 1 48 361.8898 Tm (abcdefghijklmnopqrstuvwxyz) Tj T* ET
+BT 1 0 0 1 48 343.8898 Tm (0123456789  !  ?  /  +  -  =  \(  \)) Tj T* ET
+.176471 .45098 .72549 RG
+n 48 54 m 547.2756 54 l S
+.337255 .396078 .45098 rg
+BT /F1 8 Tf 9.6 TL ET
+BT 1 0 0 1 48 38 Tm (Controlled local fixture - no historical Nokia or Microsoft endpoint involved) Tj T* ET
+BT 1 0 0 1 506.3556 38 Tm (Page 1 of 1) Tj T* ET
+ 
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000061 00000 n 
+0000000102 00000 n 
+0000000209 00000 n 
+0000000321 00000 n 
+0000000524 00000 n 
+0000000592 00000 n 
+0000000921 00000 n 
+0000000980 00000 n 
+trailer
+<<
+/ID 
+[<60c4bc371f8a08b1d67246e62630ff33><60c4bc371f8a08b1d67246e62630ff33>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 6 0 R
+/Root 5 0 R
+/Size 9
+>>
+startxref
+3735
+%%EOF

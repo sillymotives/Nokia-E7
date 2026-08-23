@@ -82,10 +82,16 @@ transactions are recorded in
 
 ## Active gate: native local-content validation
 
-Build and deploy a controlled, hash-recorded test pack containing PDF, ZIP,
-plain text, and representative Office documents through the proven Mass-memory
-MTP path. Test the native file manager, ZIP manager, Adobe Reader, and any
-available local Office handler without using a remote service or account.
+Native content probe v1 has been built and independently verified on the host.
+It contains hash-allowlisted PDF 1.3, Deflate ZIP, and plain-text fixtures. Its
+guarded MTP script creates only `Mass memory:/KAI-NATIVE-V1`, retrieves all
+three uploaded objects, compares them byte-for-byte, and leaves the verified
+folder for native testing. Deploy it and test Files, ZIP manager, and Adobe
+Reader according to [`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
+
+Do not add an Office fixture merely to exercise the account-dependent
+Microsoft Apps setup form. First identify a genuine local Office file handler;
+then give it representative documents in a separate controlled probe.
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

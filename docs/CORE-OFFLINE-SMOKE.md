@@ -112,7 +112,12 @@ that any historical Nokia, Ovi, Microsoft, news, weather, social, or map server
 still exists. Server-dependent launchers will be evaluated separately and only
 where preserving their native workflow would be meaningful.
 
-The next efficient step is a controlled local content pack: PDF, ZIP, text, and
-representative Office documents transferred through the already proven MTP
-path. That will test native rendering and extraction without depending on any
-retired service.
+Native content probe v1 is now prepared and host-verified with conservative
+PDF 1.3, Deflate ZIP, and plain-text fixtures. Its guarded deployment retrieves
+and compares every uploaded object before declaring success. The remaining
+device-side step is documented in
+[`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
+
+Representative Office documents are deferred until a local Office handler is
+identified. The visible Microsoft Apps launcher is an account-dependent setup
+surface and is not itself evidence that such a handler is installed.

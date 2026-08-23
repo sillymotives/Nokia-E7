@@ -204,9 +204,15 @@ Files and ZIP browsed Mass memory, and User guide displayed its offline index.
 Microsoft Apps led to an account-dependent Office communications setup screen,
 not a local document browser.
 
-Build and deploy a controlled, hash-recorded PDF/ZIP/text/Office test pack over
-the proven MTP path. Use it to test native local-content handling without an
-account or historical service endpoint.
+Native content probe v1 is built and host-verified. It uses conservative PDF
+1.3, Deflate ZIP, and plain-text fixtures, plus a guarded MTP deployment that
+retrieves and compares every created file. Deploy it and exercise Files, Adobe
+Reader, and ZIP according to
+[`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md), without an account or historical
+service endpoint.
+
+Office-format fixtures remain deferred until a genuine local Office handler is
+identified; the Microsoft Apps account form is not one.
 
 
 

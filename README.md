@@ -51,7 +51,9 @@ The safe host paths are established: USB identity, AT interrogation, guarded
 mass-memory access, reversible MTP transfer, and local Wi-Fi HTTP have all been
 proved. A read-only visual census of the native menu, installed applications,
 widgets, home screens, installation policy, and device information is also
-complete. The first native repair is the handset's stale system date and time.
+complete. The stale system date, time, and Cardiff time zone have been repaired
+and survived a normal power cycle. A controlled PDF/ZIP/text probe is prepared
+for the first native local-content transaction.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
@@ -65,6 +67,8 @@ The proven MTP stores, transfer types, and mutation boundary are recorded in
 [`docs/MTP.md`](docs/MTP.md).
 The proven Wi-Fi/browser path and web-runtime capabilities are recorded in
 [`docs/WIFI-BROWSER.md`](docs/WIFI-BROWSER.md).
+The guarded local-content deployment and on-device pass conditions are recorded
+in [`docs/NATIVE-CONTENT-V1.md`](docs/NATIVE-CONTENT-V1.md).
 
 The non-private serial-probe subset of the recovered 2026-08-05 Linux toolkit
 is preserved under

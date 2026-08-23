@@ -101,9 +101,9 @@ server. No tested application crashed.
 | Notes | Pass: launch | The native `Create note` editor opened. | Text entry, persistence, editing, and delete. |
 | Calculator | Pass: launch | The full native calculator opened. | Arithmetic transaction. |
 | Dictionary | Partial | English-to-English mode opened; English is installed and the UI offered additional language downloads. | A definition lookup and whether its English data is populated. |
-| Files | Pass: browse | Phone memory and Mass memory were listed; the Mass memory directory tree opened. | File open/create/rename/delete through the native manager. |
-| ZIP | Pass: browse | ZIP manager opened and browsed the Mass memory tree. | Opening, creating, and extracting a controlled archive. |
-| Adobe Reader | Pass: launch | Browse files, Recent files, and Updates & upgrades were available. | Rendering, navigation, and text legibility with a controlled PDF. |
+| Files | Pass: local open | Phone memory and Mass memory were browsed; the user reports that the deployed v1 plain-text fixture opens correctly. | File create/rename/delete through the native manager. |
+| ZIP | Pass: local archive | ZIP manager browsed Mass memory, and the user reports that the controlled v1 Deflate archive works correctly. | Creating a new archive on the handset. |
+| Adobe Reader | Pass: local render | Its document browser opened, and the user reports that the controlled one-page PDF 1.3 fixture works correctly. | More complex PDFs and performance limits. |
 | Microsoft Apps | Partial: service-bound | It opened an account form for Office mail, documents, calendar, contacts, and instant messaging. | Endpoint compatibility; no credentials or network were used. |
 | User guide | Pass: offline index | The full offline topic index opened, including Office and Connectivity sections. | Search and individual topic rendering. |
 
@@ -112,10 +112,10 @@ that any historical Nokia, Ovi, Microsoft, news, weather, social, or map server
 still exists. Server-dependent launchers will be evaluated separately and only
 where preserving their native workflow would be meaningful.
 
-Native content probe v1 is now prepared and host-verified with conservative
-PDF 1.3, Deflate ZIP, and plain-text fixtures. Its guarded deployment retrieves
-and compares every uploaded object before declaring success. The remaining
-device-side step is documented in
+Native content probe v1 is host-verified and has passed on the handset by direct
+user observation. Its conservative PDF 1.3, Deflate ZIP, and plain-text
+fixtures all work through their native local paths. The test contract and
+evidence boundary are documented in
 [`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
 
 Representative Office documents are deferred until a local Office handler is

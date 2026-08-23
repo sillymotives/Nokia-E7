@@ -52,8 +52,9 @@ mass-memory access, reversible MTP transfer, and local Wi-Fi HTTP have all been
 proved. A read-only visual census of the native menu, installed applications,
 widgets, home screens, installation policy, and device information is also
 complete. The stale system date, time, and Cardiff time zone have been repaired
-and survived a normal power cycle. A controlled PDF/ZIP/text probe is prepared
-for the first native local-content transaction.
+and survived a normal power cycle. The controlled PDF/ZIP/text probe has passed
+on the handset, establishing Files, Adobe Reader, and ZIP manager as useful
+native local-content paths.
 
 Project status and evidence boundaries are recorded in
 [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

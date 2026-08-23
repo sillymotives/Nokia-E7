@@ -204,15 +204,19 @@ Files and ZIP browsed Mass memory, and User guide displayed its offline index.
 Microsoft Apps led to an account-dependent Office communications setup screen,
 not a local document browser.
 
-Native content probe v1 is built and host-verified. It uses conservative PDF
-1.3, Deflate ZIP, and plain-text fixtures, plus a guarded MTP deployment that
-retrieves and compares every created file. Deploy it and exercise Files, Adobe
-Reader, and ZIP according to
-[`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md), without an account or historical
-service endpoint.
+Native content probe v1 is host-verified and has passed on the handset by direct
+user observation. Files opens its plain-text fixture, Adobe Reader renders its
+conservative PDF 1.3 fixture, and ZIP manager handles its local Deflate archive.
+The returned toolkit matches the issued package SHA-256, but no generated MTP
+deployment report bundle was supplied; that evidence boundary is recorded in
+[`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
 
 Office-format fixtures remain deferred until a genuine local Office handler is
 identified; the Microsoft Apps account form is not one.
+
+The active gate is now the remaining core offline transactions: alarm,
+calendar, note, calculator, dictionary lookup, and User guide search. Each test
+uses disposable local state and requires no network service.
 
 
 

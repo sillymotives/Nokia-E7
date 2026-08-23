@@ -39,9 +39,11 @@ guide is not proof of the installed state or behaviour of firmware
 | Home screen, profiles, themes, notification light, device search | Retain | Core native shell; confirm current widgets, shortcuts, profiles, and dead service prompts. |
 | Clock, alarms, calendar | Retain | High-value offline PIM; test alarms, recurring entries, time zone handling, and local backup/export. |
 | Contacts | Retain / Bridge | Keep the native database; determine safe import/export and whether CardDAV must be translated through a host. |
-| Notes, calculator, dictionary, ZIP manager | Retain | High-value offline tools; verify each application and its storage/export behaviour. |
-| Quickoffice and PDF reader | Retain / Repair | MTP advertises legacy Office and PDF object types, but rendering and editing are unproved. Test representative local files. |
-| File manager and device search | Retain | Verify access to ordinary mass-memory folders and useful indexed content. |
+| Notes, calculator, dictionary | Retain | High-value offline tools; complete their transactional tests and storage/export checks. |
+| ZIP manager | Retain | A controlled local Deflate archive works; archive creation remains unproved. |
+| PDF reader | Retain | A conservative local PDF 1.3 fixture renders correctly; establish complexity and performance limits later. |
+| Local Office handler | Unknown / Repair | MTP advertises legacy Office object types, but Microsoft Apps exposes an account setup surface rather than a local browser. Identify a genuine handler before testing documents. |
+| File manager and device search | Retain | Files browses Mass memory and opens the controlled plain-text fixture; indexed search and local mutations remain unproved. |
 | Camera, Photos, image editor, video editor | Retain | Test capture, autofocus/flash, geotagging choices, editing, gallery indexing, and export. |
 | Music player, playlists, recorder, FM radio | Retain / Repair | MTP transport formats are known; playback, recording, headset antenna requirements, library refresh, and tags remain unproved. |
 | Video player, HDMI/TV output, Web TV | Retain / Prune | Keep local playback and physical output if they work; legacy Web TV catalogues are likely prune candidates. |
@@ -80,7 +82,7 @@ evidence of local Office document handling. Detailed results and unproved
 transactions are recorded in
 [`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md).
 
-## Active gate: native local-content validation
+## Completed gate: native local-content validation v1
 
 Native content probe v1 has been built and independently verified on the host.
 It contains hash-allowlisted PDF 1.3, Deflate ZIP, and plain-text fixtures. Its
@@ -92,6 +94,18 @@ Reader according to [`NATIVE-CONTENT-V1.md`](NATIVE-CONTENT-V1.md).
 Do not add an Office fixture merely to exercise the account-dependent
 Microsoft Apps setup form. First identify a genuine local Office file handler;
 then give it representative documents in a separate controlled probe.
+
+The user completed the on-device check on 2026-08-23 and reports that the text,
+PDF, and ZIP fixtures all work correctly. Files, Adobe Reader, and ZIP manager
+are now retain candidates backed by local-content use, not merely launch tests.
+
+## Active gate: core local transactions
+
+Complete the still-open offline transactions in
+[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md): alarm firing and cleanup,
+calendar entry persistence and cleanup, note persistence/edit/delete,
+calculator arithmetic, dictionary lookup, and User guide search. These actions
+remain local, disposable, and independent of retired services.
 
 This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file

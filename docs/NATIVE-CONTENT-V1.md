@@ -58,3 +58,20 @@ A readable video is sufficient evidence. The persistent test folder remains a
 small, reversible diagnostic fixture and may be removed in a later, separately
 bounded cleanup pass.
 
+## Device result
+
+Completed: 2026-08-23
+
+The user reports that all three fixtures work correctly on the handset. This
+promotes the following native paths from launch-only evidence to useful local
+content handling:
+
+- Files can browse the deployed folder and open its plain-text fixture;
+- Adobe Reader can open and render the conservative local PDF; and
+- ZIP manager can open the local Deflate archive and expose its text content.
+
+The returned toolkit ZIP is byte-identical to the issued package, with SHA-256
+`f7a143c32e99b8b7bd2620f24238387c51be86e7cea35addda2ae38a1c1a29c3`,
+and its embedded ZIP integrity test passes. The generated MTP deployment report
+bundle was not supplied, so the device-side result is recorded as a direct user
+observation rather than a captured host log.

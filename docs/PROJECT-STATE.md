@@ -115,6 +115,23 @@ The bounded MTP transaction at `2026-08-23T19:50:01Z` then proved:
 MTP is therefore a verified bidirectional payload and retrieval path, not just
 an advertised interface.
 
+The local Wi-Fi/browser probe at `2026-08-23T20:03:28Z` proved:
+
+- the E7 can reach a same-subnet host over plain HTTP by Wi-Fi;
+- its user agent identifies Symbian/3, Series60/5.3, E7-00 firmware
+  `111.040.1511`, and AppleWebKit/535.1;
+- its reported screen is 640×360 with a 640×284 page viewport at DPR 1;
+- CSS, JavaScript, GIF, favicon, and same-origin XHR resources loaded;
+- XHR returned status 200;
+- touch, canvas, local storage, application cache, WebSocket, geolocation, and
+  HTML audio/video interfaces are present;
+- Web Workers are absent;
+- the HTTP `Accept` catalogue includes JAR/JAD, Nokia widget, OMA, HTML/XML,
+  and OPML content types.
+
+Presence of a browser interface or accepted content type is not proof of full
+standards conformance, codec support, permission success, or installability.
+
 ## Reported working state
 
 The following is inherited from earlier hands-on work and is not yet backed by
@@ -158,12 +175,12 @@ image made—before any destructive phone operation is considered.
 
 ## Active gate
 
-Run a host-side plain-HTTP probe on the local network and visit it manually from
-the E7 over Wi-Fi. It may record the browser request headers and a bounded
-JavaScript capability report. It may not alter network settings, install a
-certificate, expose the listener beyond the local host interfaces, download
-external content, or make a deliberate payload/configuration write. Ordinary
-browser history or session state may change when the page is visited.
+Deploy a small self-contained HTML field deck to a new ordinary `KAI` folder on
+Mass memory using the verified MTP path. Retrieve the deployed object and
+verify its SHA-256 before leaving it in place. Then open `KAI/INDEX.HTM`
+manually on the phone to test local-file rendering and local-storage behaviour.
+The deployment may not touch Phone memory, existing objects, Symbian-managed
+trees, device properties, formatting, reset, or installation state.
 
 
 

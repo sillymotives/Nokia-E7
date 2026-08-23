@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nokia E7 host-side baseline capture, version 2.
+# Nokia E7 host-side baseline capture, version 3.
 # Read-only with respect to connected devices: no mount, unmount, install,
 # repair, unlock, flash, or device write operations are performed.
 
@@ -10,7 +10,7 @@ export LC_ALL=C
 export LANG=C
 umask 077
 
-readonly SCRIPT_VERSION="2"
+readonly SCRIPT_VERSION="3"
 
 say() {
     printf '%s\n' "$*"
@@ -111,6 +111,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
             if have udevadm; then
                 udevadm info --query=property --path="$dev" 2>&1 |
                     sed -E '/^(ID_SERIAL|ID_SERIAL_SHORT|ID_USB_SERIAL|ID_USB_SERIAL_SHORT)=/d' |
+                    sed -E 's/[0-9]{15}/[15-digit-id-redacted]/g' |
                     sed -n '1,160p'
             fi
             say "--"
@@ -165,6 +166,7 @@ mkdir -m 700 -- "$RUN_DIR" || {
         if have udevadm; then
             udevadm info --query=property --name="$tty" 2>&1 |
                 sed -E '/^(ID_SERIAL|ID_SERIAL_SHORT|ID_USB_SERIAL|ID_USB_SERIAL_SHORT)=/d' |
+                sed -E 's/[0-9]{15}/[15-digit-id-redacted]/g' |
                 sed -n '1,140p'
         fi
         say "--"

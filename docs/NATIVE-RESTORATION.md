@@ -64,16 +64,23 @@ widget catalogue, four home-screen panels, and complete software-information
 screen were captured on 2026-08-23. Sanitised findings are recorded in
 [`NATIVE-CENSUS.md`](NATIVE-CENSUS.md).
 
-## Active gate: establish trustworthy device time
+## Completed gate: establish trustworthy device time
 
-The home-screen clock showed `27/07/2012`. Correct the date, time, and local
-time zone manually, then prove that they survive a normal power cycle. Do not
-judge TLS, mail, certificates, Maps networking, or signed content while the
-device clock is wrong.
+The date, time, and Cardiff time zone were corrected and survived a normal
+power cycle on 2026-08-23. The phone no longer depends on its stale 2012 clock
+for date-sensitive testing.
 
-This gate authorises only the ordinary date, time, time-zone, and automatic-time
-settings plus one normal shutdown/startup. It does not authorise reset, format,
-firmware flashing, package installation, or component removal.
+## Active gate: core offline native smoke test
+
+Run the bounded native-only test in
+[`CORE-OFFLINE-SMOKE.md`](CORE-OFFLINE-SMOKE.md). It covers Clock/alarm,
+Calendar, Notes, Calculator, Dictionary, Files, ZIP, Adobe Reader, Microsoft
+Apps, and the on-device User guide. Remove the exact disposable alarm, calendar
+entry, and note at the end.
+
+This gate does not authorise package installation, uninstall, account creation,
+network-dependent setup, reset, format, firmware flashing, or system-file
+mutation.
 
 ## First test order after census
 

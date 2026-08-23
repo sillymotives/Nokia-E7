@@ -1,0 +1,6 @@
+# Local reconnaissance output may contain hardware identifiers.
+nokia-e7-baseline-*/
+nokia-e7-baseline-*.tar.gz
+nokia-e7-baseline-*.tar.gz.sha256
+captures/private/
+

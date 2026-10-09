@@ -194,6 +194,15 @@ This gate does not authorise package installation, uninstall, account creation,
 network-dependent setup, reset, format, firmware flashing, or system-file
 mutation.
 
+## Standalone terminal bridge (2026-10-09)
+
+A native Qt maintenance application now answers bounded read-only commands
+from a Debian terminal over trusted local Wi-Fi. This is a separate diagnostic
+tool, not a replacement for the phone's native UI, and not permission to prune
+or modify firmware services. `ps save` captured a process-name snapshot; its
+limits and the startup-resource clues are documented in
+[`E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md`](E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md).
+
 ## First test order after census
 
 1. Clock, calendar, notes, calculator, dictionary, ZIP, Quickoffice, and PDF.

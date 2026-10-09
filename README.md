@@ -47,6 +47,8 @@ The handset-specific visual inventory is recorded in
 
 ## Current phase
 
+**2026-10-09 update:** A separately authorised, manually launched native Qt E7 Bridge now connects over trusted local Wi-Fi to a Debian terminal. v0.3.0 was installed on the physical handset and answered read-only diagnostic and process-list commands; a saved snapshot enumerated 172 process names. No ROM or `Z:` files were modified. See [`bridge/e7-bridge/`](bridge/e7-bridge/) for reviewable source and tests, and [`docs/E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md`](docs/E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md) for evidence and limitations. Firmware flashing remains gated on independent recovery preflight.
+
 The safe host paths are established: USB identity, AT interrogation, guarded
 mass-memory access, reversible MTP transfer, and local Wi-Fi HTTP have all been
 proved. A read-only visual census of the native menu, installed applications,

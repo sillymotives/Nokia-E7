@@ -1,6 +1,6 @@
 # Project state
 
-Updated: 2026-08-23
+Updated: 2026-10-09
 
 ## Scope
 
@@ -136,6 +136,25 @@ yet flash-authorised. The current gate inventories exact stock firmware,
 product/variant identity, preservation images, Nokia service tools, and a
 dead-USB recovery path. See
 [`FIRMWARE-PREFLIGHT-V1.md`](FIRMWARE-PREFLIGHT-V1.md).
+
+## Scoped native bridge acceptance (2026-10-09)
+
+A separately authorised **user-space application installation**, distinct from the
+firmware modification gate, has been completed. E7 Bridge v0.2.1 was compiled
+and authenticated over local Wi-Fi; v0.3.0 was compiled and installed on the
+physical E7 and reported working for `ping`, `info`, `drives`, `ls`, `stat`,
+`ps`, `ps all` and `ps save`. The saved process inventory contained **172**
+names, compared with **173** in an earlier interactive listing. These are
+operator-reported observations of process names, not proof of startup order,
+resource consumption, or removable dependencies.
+
+The agent is manually started, uses authenticated but unencrypted TCP on a
+trusted LAN, and exposes **read-only** filesystem metadata and process-name
+enumeration. The Python suite passed **20** tests in the authoring environment.
+Original firmware, patches and core music-player behaviour were not modified
+by this bridge build. Post-upgrade standby and full regressions remain to be
+checked. No firmware patch, service disablement, remote write, or flash has
+been authorised. See [`E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md`](E7-BRIDGE-AND-BOOT-AUDIT-2026-10-09.md).
 
 ## Mutation policy
 

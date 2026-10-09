@@ -1,0 +1,12 @@
+dist/
+audit-output/
+__pycache__/
+*.pyc
+*.sis
+*.dmp
+*.RPKG
+*.cre
+*.jsonl
+# Never commit pairing credentials or captured handset inventories.
+pairing-key
+snapshots/

@@ -1,160 +1,136 @@
-# E7 Bridge v0.3.0: Nokia Belle live process audit
+# E7 Bridge v0.4.0: Black Box diagnostics (experimental)
 
-**Status (2026-10-09):** The v0.3.0 application was compiled, installed, and
-authenticated from a physical Nokia E7 to a Debian host over local Wi-Fi.
-The operator exercised `ping`, `info`, `drives`, `ls`, `stat`, `ps`, `ps all`,
-and `ps save`. A saved process census contained 172 names; an earlier live
-listing contained 173. This is an operator-reported physical test, not a
-reproducible hardware run in CI.
+A manually launched **read-only** native Qt 4.7.4 agent for the Nokia E7-00
+running Belle, with a Python 3 Debian terminal controller. Built on the already
+proven E7 Bridge v0.3.0. **The v0.4.0 Symbian build and on-phone telemetry
+remain unverified until an operator tests this release on the actual device.**
 
-This release adds *read-only native Symbian process-name enumeration* plus a
-read-only offline firmware boot-resource audit for the recovered Dumberdore
-`SYM.RPKG`. There are **no new Symbian capabilities**, firmware writes,
-process termination, autostart, or remote shells. Music and Wi-Fi configuration
-are untouched.
+## What is new
 
-## First: what the supplied firmware archive showed
+| Command on Debian | Behaviour |
+| --- | --- |
+| `metrics` | On-demand RAM totals/free bytes and **raw** power-state integers, or `unavailable` where the device denies/doesn't implement a read. No percentage is inferred. |
+| `capture` | One host-timestamped, non-atomic RAM/power/process snapshot saved on **Debian only**. |
+| `diff` | Compare the two newest saved `ps save`/`capture` process inventories, reporting appeared/disappeared entries. Does not contact the phone. |
+| `record` | 3 foreground snapshots 10 seconds apart, written incrementally to a private Debian `.jsonl` file. |
+| `record N S` | Bounded recording: 2–12 samples, 5–120 seconds between samples, up to 600 seconds between first/last samples. |
 
-An offline audit of an operator-provided Dumberdore archive parsed **13,356** `Z:`
-entries and checked paths, sizes, and SHA-256 against a separate private inventory.
-Generated per-file inventories and reports are intentionally excluded from this
-public source release.
+All existing `ping`, `info`, `drives`, `ls`, `stat`, `ps`, `ps all`, `ps save`
+and `exit` commands remain available. The Nokia does not listen on TCP and
+cannot be remotely started. Connection is initiated manually in its app UI.
 
-The following are embedded ASCII references in compiled startup `.rsc`
-resources, not proof that each component starts on every boot:
+The process list comes from `TFindProcess` in pages. It is **not an atomic
+snapshot** or a service dependency graph. A process missing from one reading
+may simply have exited or been started after its page was enumerated. Raw
+battery-level/status values come from Symbian's HWRM publish/subscribe
+properties, and must not be interpreted as 0–100 percent. Query failures are
+preserved as `unavailable`, not silently replaced with plausible-looking data.
 
-- `Z:\PRIVATE\2000D75B\startup\0\uiservicescmdlist_ext.rsc` mentions
-  `iaupdatedaemon.exe`.
-- `...\noncriticalcmdlist_ext.rsc` mentions `fotacustcmds.dll`,
-  `dmutilserver.exe`, `emailservermonitor.exe`, and other components.
-- `...\criticalappscmdlist.rsc` mentions `sysap.exe`; other boot resources
-  mention `sysmon.exe`, `ewsrv.exe` and `hwrmserver.exe`.
+## Safety and trust model
 
-**Do not edit these resources or overwrite `Z:`.** We need runtime observations,
-recovery planning, and actual dependency analysis before any change.
+- Same application UID `0xE94B7001`, same development signing identity, version
+  raised to `0.4.0`. Original Nokia firmware is *not modified*.
+- Exactly the existing `NetworkServices ReadUserData` capabilities: no additional
+  privileged rights, process control, property changes, autostart or remote shell.
+- Native `HAL::Get` and `RProperty::Get` only; no write-mode operations.
+- Host stores snapshots under `~/.local/share/e7-bridge/snapshots/` with new
+  files created as mode `0600`. It does not upload telemetry to third parties.
+- HMAC challenge authentication remains, but **the Wi-Fi link is not encrypted**.
+  Use only on a trusted LAN. The short manually typed key is development-only.
+- A ROM/`Z:` filesystem dump does not back up writable `C:` state. Do not
+  remove services or edit startup resources based on these observations alone.
+- Keep signing credentials, pairing keys, raw captures, host addresses,
+  filesystem listings and serial/device identifiers **out of public Git**.
 
-## 1. Simulated Linux tests
-
-From this extracted project directory:
+## Validate the Linux host and simulator
 
 ```sh
 python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-We verified **20 passing tests** and build-shell syntax in the authoring
-environment. That includes crypto tests, pagination, JSON export, and a small
-synthetic RPK2 fixture. This is not a substitute for a real Symbian compile.
+All **27** host-side Python tests passed in the authoring container. The test
+suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
+local report permissions, process differences, recording limits, interruption,
+and read-only source assertions. It does not replace Symbian compilation or
+on-device measurements.
 
-For an offline mock bridge, run:
+To run the simulator, use an **existing** pairing key in
+`~/.config/e7-bridge/pairing-key`; do not run `init` if you already paired:
 
 ```sh
 python3 host/e7_bridge.py serve --bind 127.0.0.1
-# In a second terminal:
+# In another terminal:
 python3 tests/fake_phone.py --host 127.0.0.1
 ```
 
-Reuse the pairing key stored under `~/.config/e7-bridge/pairing-key`.
-**Do not run `init` again** or publish the key.
+## Build and install on Sanctuary (Debian)
 
-## 2. Compile and upgrade the Nokia app
-
-On your Debian workstation, with PocketJS's `sr1-qt474-v1` historical Symbian
-toolchain already working:
+Prerequisite: the pinned PocketJS Symbian Belle compiler has already passed
+`bun tools/symbian.ts doctor` and built its probe on Sanctuary. The bridge
+build does **not** modify the PocketJS checkout.
 
 ```sh
-cd /path/to/Nokia-E7/bridge/e7-bridge
+cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.3.0.sis
+file dist/E7Bridge-v0.4.0.sis
+sha256sum dist/E7Bridge-v0.4.0.sis
 ```
 
-The build isolates the toolchain, source, and signer as read-only Docker mounts
-and disables network / USB access inside the container. Only `dist/` is
-writable. A successful build emits `dist/E7Bridge-v0.3.0.sis`.
+If the native compile or SIS packaging fails, **stop** and inspect the error.
+Do not alter ROMPatcher or force an installation to bypass the failure.
 
-- Copy the **SIS file** to `E:/Installs` using your working transfer method.
-- Install / upgrade **E7 Bridge** on the phone's **C: phone memory**.
-- The SIS uses the **same UID (`0xE94B7001`) and signing volume** as v0.2.1,
-  with an increased *package version* `0.3.0`. Keep that signing volume intact.
-- Close the old agent before installing. If Symbian rejects the upgrade, stop
-  and report its exact error; don't force the installer or modify ROMPatcher.
-- Launch the app manually. It should show `v0.3.0`.
+If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
+Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
+existing PocketJS development signing volume so this has the same signer as
+v0.3.0. Close v0.3.0 first, and check that the new UI reports `v0.4.0`.
 
-## 3. Connect to Debian and inspect processes
+On Debian, substitute Sanctuary's **current** local IPv4 address:
 
 ```sh
-cd /path/to/Nokia-E7/bridge/e7-bridge
-ip -4 addr show
-python3 host/e7_bridge.py serve --bind YOUR_DEBIAN_LAN_IP
+python3 host/e7_bridge.py serve --bind YOUR_CURRENT_DEBIAN_IP
 ```
 
-Replace the IP with your workstation's *current* Wi-Fi address. Keep the Nokia on the
-same trusted network and connect from its UI with the **existing** pairing key.
-
-In the terminal:
+Manually start E7 Bridge on the E7 and connect with the same pairing key.
+Use `help` for a complete list. Recommended first physical acceptance pass:
 
 ```text
 ping
 info
-drives
-ps           # first 20 process names
-ps 20        # next 20
-ps all       # all names, paginated
-ps save      # save an inventory JSON on Debian only
+metrics
+ps save
+capture
+record 3 10
+diff
 exit
 ```
 
-`ps save` writes a timestamped `0600` JSON file under:
+`record` is a foreground operation; leave the phone's app visible and Wi-Fi
+connected. If interrupted or disconnected, completed JSONL samples remain on
+Debian. Do not misread `record 3 10` as continuous unattended monitoring.
 
-`~/.local/share/e7-bridge/snapshots/`
+Afterwards, manually exit E7 Bridge, check music playback and Wi-Fi, and
+verify the Nokia returns to normal standby. Collect a cold-boot `ps save` only
+if convenient; do **not** modify startup processes based on it yet.
 
-This is a **point-in-time inventory of names**, not process IDs, resources,
-dependencies, or persistence. App crashes or permission restrictions may leave
-some processes invisible. A service absent from this list is not necessarily
-safe to remove.
+## Developer layout
 
-On the Nokia, exit the agent and verify normal music playback, Wi-Fi and
-standby afterwards. Initial network and process commands passed on a physical E7;
-post-upgrade long-term battery and standby effects remain unmeasured.
+- `phone/main.cpp` — Qt 4.7.4 and Symbian native read-only agent.
+- `phone/sha256_compat.h` — SHA-256 HMAC compatible with Qt 4.7.4.
+- `host/e7_bridge.py` — Python terminal, capture/diff/record commands.
+- `tests/fake_phone.py` — synthetic reply source for safe host tests.
+- `tests/` — auth, protocol, crypto, firmware parser, safety and Black Box tests.
+- `build/` — isolated pinned PocketJS toolchain build and SIS packaging.
+- `tools/audit_boot.py` — separate offline startup-resource inspection tool.
 
-## 4. Optional: compare with the ROM archive on Debian
+## Implementation references
 
-If you have a private Dumberdore `SYM.RPKG` on your workstation, run:
-
-```sh
-python3 tools/audit_boot.py \
-  --archive '/path/to/SYM.RPKG' \
-  --processes "$HOME/.local/share/e7-bridge/snapshots/e7-processes-EXACTNAME.json" \
-  --out ./audit-output
-```
-
-Use the actual JSON filename produced by `ps save`. This writes local
-`e7-boot-map.md` and `e7-boot-map.json`. Supplying a CSV from the prior inventory
-via `--inventory /path/to/nokia_e7_zdrive_inventory.csv` also cross-checks
-size and SHA-256 of **every archive entry**.
-
-The tool only scans `Z:\PRIVATE\2000D75B\startup\0\*.rsc`. It extracts
-printable binary references, *not* a full compiled-Symbian RSC parse. It never
-modifies the archive and doesn't contact the phone. Do not publish generated maps without manual review; keep raw ROM-derived output private.
-A sanitised live-summary is documented in the parent repository instead.
-
-## Important security / safety boundaries
-
-- The link has authenticated HMAC but **no encryption**. Process names and
-  directory names can be observed by anyone capturing traffic on the Wi-Fi.
-  Use only your trusted LAN and never expose TCP 46270 to the internet.
-- Keep all keys private. The 16-hex-digit pairing key is only 64 random bits.
-  It is a development pairing mechanism, not modern secure remote administration.
-- No C: system/private folder enumeration is added. No remote file download,
-  process control, root access, patch activation, or destructive commands.
-- The **original signed firmware** and **writable C: state** are separate:
-  a complete ROM or Z: backup is not a full backup of the live system.
-- `Q_OS_SYMBIAN` native `TFindProcess` compiled and enumerated processes on a
-  physical E7. This does not validate privilege elevation or process control.
-
-## References
-
-- PocketJS Symbian E7 build workflow: https://github.com/pocket-nexus/pocketjs/blob/main/docs/SYMBIAN_E7.md
-- Nokia Symbian RSC reference: https://cortex.p.gen.nz/nokia/symbian/Nokia%20Symbian3%20Developer%27s%20Library%20v0.8/GUID-4406BDE0-8256-5F97-9FC5-BBFD11D9C4A3.html
-- `TFindProcess` example (historical Symbian C++): https://stackoverflow.com/questions/6400573/is-it-possible-to-know-what-processes-are-running-on-a-symbian-phone-with-qt
+- Symbian `HAL::Get(HALData::EMemoryRAM[Free])` and HAL library:
+  https://flylib.com/books/en/2.338.1.119/1/
+- Qt Mobility 1.2 Symbian HWRM power state property category `0x10205041`, keys 1–3:
+  https://qt.developpez.com/doc/qtmobility-1.2/publ-subs/
+- Symbian `RProperty::Get` permission checks (read-only):
+  https://cortex.p.gen.nz/nokia/symbian/S60%203rd%20Edition%20C%2B%2B%20Developer%27s%20Library%20v1.1/GUID-35228542-8C95-4849-A73F-2B4F082F0C44/html/SDL_93/doc_source/reference/reference-cpp/E32_EKA2/RPropertyClass.html
+- Historical Symbian Qt build workflow:
+  https://github.com/pocket-nexus/pocketjs/blob/main/docs/SYMBIAN_E7.md

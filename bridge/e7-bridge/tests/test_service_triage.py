@@ -70,6 +70,7 @@ class ServiceTriageTests(unittest.TestCase):
         self.assertIn('iaupdatebgchecker',report)
         self.assertIn('ROM-dump / Norton / RomPatcher',report)
         self.assertNotIn('safe to remove',report)
+        self.assertIn('Wi-Fi-off snapshots require a different transport',report)
 
     def test_process_suffix_and_case_variants(self):
         self.assertEqual(triage.basename_of_process('!MsvServer[1000484b]0001'),'!msvserver')

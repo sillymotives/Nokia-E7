@@ -79,8 +79,9 @@ another writable drive.
 ## Next experiments (all reversible observations)
 
 Capture another v0.9 baseline after a normal reboot and a later idle period.
-Then, separately test Wi-Fi on/off and opening/closing native Mail, recording
-what actually changes each time. Do not claim network traffic from process
+Then, separately test Wi-Fi activity while keeping the bridge connected, and
+opening/closing native Mail, recording what changes each time. Turning Wi-Fi
+off would disconnect our present Wi-Fi-only bridge and prevent collection. Do not claim network traffic from process
 names alone. Before any deeper OS action, we need a proper package-to-file/SID
 registry query, decoded SSM startup conditions, preserved patcher inputs, a
 verified writable-state backup, and a recovery procedure.

@@ -275,7 +275,7 @@ def markdown(data):
     lines.extend('- '+reason for reason in data['limitations'])
     lines.extend(['', '## Next reversible experiments', '',
                   '1. Capture reboot-idle and extended-idle baselines, then compare process deltas without changing startup configuration.',
-                  '2. Compare Wi-Fi connected/disconnected snapshots; do not infer network transmission without network telemetry.',
+                  '2. Compare Wi-Fi idle versus network activity while keeping the Wi-Fi bridge connected; Wi-Fi-off snapshots require a different transport.',
                   '3. Compare native Mail opened/closed snapshots before changing any email or messaging service.',
                   '4. Obtain SIS entry file/SID ownership and genuine startup conditions before considering service controls.',
                   '5. Preserve Norton/patcherS3.ldd/RomPatcher+ and the Dumberdore archive until a full writable-C: and recovery route is validated.', ''])

@@ -78,7 +78,7 @@ if [[ "$actual" != "$version" ]]; then
 fi
 mkdir -p -- "$out"
 out=$(cd -- "$out" && pwd)
-echo "Building E7 Bridge v0.4.1 using pinned $version image."
+echo "Building E7 Bridge v0.5.0 using pinned $version image."
 echo 'Read-only toolchain & source; network=none; no device access.'
 
 docker run --rm --platform linux/amd64 --network none \
@@ -92,5 +92,5 @@ docker run --rm --platform linux/amd64 --network none \
     --entrypoint /bin/bash "$image" \
     /bridge-scripts/in-container.sh
 
-printf '\nBuild output: %s/E7Bridge-v0.4.1.sis\n' "$out"
+printf '\nBuild output: %s/E7Bridge-v0.5.0.sis\n' "$out"
 echo 'The resulting SIS is not installed until you explicitly install it on the Nokia.'

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.4.1: Linux host for a user-operated, read-only Symbian agent.
+"""E7 Bridge v0.5.0: Linux host for a user-operated, read-only Symbian agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -26,6 +26,10 @@ MAX_LINE = 4096
 PROTO = 'E7B1'
 SECRET_PATH = Path.home() / '.config' / 'e7-bridge' / 'pairing-key'
 SNAPSHOT_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'snapshots'
+PROBE_PATH = 'E:/KAI/INDEX.HTM'  # Exactly one nonprivate fixture on the E7.
+PROBE_CHUNK = 1024
+PROBE_MAX_BYTES = 65536
+RECEIVE_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'received'
 METRIC_FIELDS = ('ram_total_bytes', 'ram_free_bytes', 'battery_level_raw', 'battery_status_raw', 'charging_status_raw')
 
 
@@ -131,6 +135,8 @@ def normalize_command(text):
         return 'DRIVES'
     if verb == 'metrics' and not arg:
         return 'METRICS'
+    if verb == 'pull' and arg.lower() == 'probe':
+        return 'PULL_PROBE'
     if verb in ('capture', 'diff') and not arg:
         return verb.upper()
     if verb == 'record':
@@ -159,7 +165,82 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, help, exit')
+
+
+def parse_probe_info(reply):
+    """Validate exact metadata for the fixed, 64 KiB non-private E7 fixture."""
+    match = re.fullmatch(r'size=([0-9]{1,5})\nsha256=([0-9a-f]{64})', reply)
+    if match is None:
+        raise BridgeError('Invalid probe metadata')
+    size = int(match.group(1))
+    if size > PROBE_MAX_BYTES:
+        raise BridgeError('Probe exceeds 64 KiB limit')
+    return size, match.group(2)
+
+
+def request_probe_chunk(sock, offset, expected_length):
+    """Read one binary chunk in the pre-existing bounded text frame protocol."""
+    if not (0 <= offset < PROBE_MAX_BYTES and offset % PROBE_CHUNK == 0 and
+            1 <= expected_length <= PROBE_CHUNK):
+        raise BridgeError('Invalid local chunk request')
+    send_line(sock, 'FILECHUNK {}'.format(offset))
+    reply = recv_line(sock)
+    if reply.startswith('ERR '):
+        raise BridgeError('E7: ' + reply[4:])
+    if not reply.startswith('B64 '):
+        raise BridgeError('Unexpected binary chunk response')
+    try:
+        data = base64.b64decode(reply[4:], validate=True)
+    except (ValueError, UnicodeError) as exc:
+        raise BridgeError('Invalid binary chunk base64: {}'.format(exc))
+    if len(data) != expected_length:
+        raise BridgeError('Wrong chunk length: expected {}, received {}'.format(
+            expected_length, len(data)))
+    return data
+
+
+def pull_probe(sock, directory=None):
+    """Pull only the fixed Field Deck fixture into private Debian storage.
+
+    Remote source is hard-coded on the Nokia. Phone-side SHA-256 allows
+    consistency checking; without transport encryption/authenticated frames
+    this DOES NOT protect against an active network attacker.
+    """
+    size, remote_sha = parse_probe_info(request(sock, 'FILEINFO'))
+    directory = Path(directory) if directory is not None else RECEIVE_DIR
+    if directory.is_symlink():
+        raise BridgeError('Refusing symlinked receive directory')
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if not directory.is_dir() or (directory.stat().st_mode & 0o077):
+        raise BridgeError('Receive directory must be private (mode 0700)')
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    basename = 'e7-fielddeck-' + stamp + '.htm'
+    output = directory / basename
+    temporary = directory / ('.' + basename + '.part')
+    digest = hashlib.sha256()
+    fd = os.open(str(temporary), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    offset = 0
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            while offset < size:
+                expected = min(PROBE_CHUNK, size - offset)
+                chunk = request_probe_chunk(sock, offset, expected)
+                stream.write(chunk)
+                digest.update(chunk)
+                offset += len(chunk)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if offset != size or digest.hexdigest() != remote_sha:
+            raise BridgeError('Transferred bytes failed size/SHA-256 validation')
+        # A link, unlike rename, fails if an existing destination has the name.
+        os.link(str(temporary), str(output))
+        return output, size, remote_sha
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def collect_processes(sock, max_entries=2000):
@@ -366,7 +447,7 @@ def print_process_diff(changes):
 
 
 def repl(sock):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, help, exit')
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -390,6 +471,7 @@ def repl(sock):
                 print('capture       Save telemetry and processes as local JSON (non-atomic)')
                 print('diff          Compare the two latest saved process snapshots (host only)')
                 print('record [N S]  Capture 2-12 samples, every 5-120 seconds (default 3 10)')
+                print('pull probe    Receive only E:/KAI/INDEX.HTM (max 64 KiB; unencrypted LAN)')
                 print('exit          Close connection and stop bridge')
                 continue
             if cmd == 'QUIT':
@@ -398,6 +480,12 @@ def repl(sock):
                 except (BridgeError, OSError):
                     pass
                 return
+            if cmd == 'PULL_PROBE':
+                path, count, digest = pull_probe(sock)
+                print('Saved read-only E7 fixture:', path)
+                print('Validated: {} bytes; SHA-256 {}'.format(count, digest))
+                print('Warning: HMAC authenticates the connection but does not encrypt its traffic.')
+                continue
             if cmd == 'METRICS':
                 values = parse_metrics(request(sock, 'METRICS'))
                 for name, value in values.items():

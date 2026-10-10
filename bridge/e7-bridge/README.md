@@ -2,8 +2,12 @@
 
 A manually launched **read-only** native Qt 4.7.4 agent for the Nokia E7-00
 running Belle, with a Python 3 Debian terminal controller. Built on the already
-proven E7 Bridge v0.3.0. **The v0.4.0 Symbian build and on-phone telemetry
-remain unverified until an operator tests this release on the actual device.**
+proven E7 Bridge v0.3.0. **Physical E7 acceptance passed on 2026-10-10:** the application was
+compiled and installed on the Nokia E7, authenticated over trusted Wi-Fi,
+and confirmed working for `ping`, `info`, `metrics`, `ps save`, `capture`,
+`diff`, and `record 3 10`. The native music player, Wi-Fi and normal standby
+were reported working after exit. Tests remain operator-observed, not CI
+hardware automation or evidence of long-term resource consumption.
 
 ## What is new
 

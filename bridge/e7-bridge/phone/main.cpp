@@ -1,4 +1,4 @@
-// E7 Bridge v0.6.0: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.7.0: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, outbound TCP, HMAC authenticated.
 // Host may send signed admin writes to public data storage / package staging.
 // No raw shell, boot service, or firmware modification commands.
@@ -8,6 +8,7 @@
 #include <QtGui/QLineEdit>
 #include <QtGui/QPushButton>
 #include <QtGui/QCheckBox>
+#include <QtGui/QDesktopServices>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QFormLayout>
 #include <QtNetwork/QTcpSocket>
@@ -18,6 +19,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QFile>
+#include <QtCore/QUrl>
 #include <QtCore/QByteArray>
 #include <QtCore/QSettings>
 #include <QtCore/QRegExp>
@@ -83,7 +85,7 @@ public:
           adminSequence(0), uploadActive(false), uploadSize(0), uploadReceived(0) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.6.0\nAuthenticated diagnostic + admin link", this);
+            "E7 Bridge v0.7.0\nAuthenticated diagnostic + admin link", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -306,7 +308,7 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.6.0");
+                     "; E7 Bridge v0.7.0");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
@@ -409,6 +411,8 @@ private slots:
             uploadChunk(seq, items);
         } else if (items.size() == 1 && items[0] == "FINISH") {
             finishUpload(seq);
+        } else if (items.size() == 4 && items[0] == "LAUNCH") {
+            launchInstaller(seq, items);
         } else if (items.size() == 1 && items[0] == "CANCEL") {
             abortUpload();
             adminReply(seq, "OK CANCELLED");
@@ -545,6 +549,84 @@ private slots:
         uploadReceived = 0;
         uploadActive = false;
         adminReply(seq, result);
+    }
+
+    // An owner-authenticated LAUNCH can open only a previously staged .sis/.sisx
+    // package from E:/Installs. The host includes its known size and digest;
+    // independently recompute both on-device before handing it to AppArc.
+    // A successful openUrl is only an installer-launch request, NOT evidence
+    // of installation. Platform UI/signing policy still applies.
+    void launchInstaller(int seq, const QList<QByteArray> &items) {
+        if (uploadActive) { adminReply(seq, "ERR UPLOAD_BUSY"); return; }
+        const QString name = QString::fromLatin1(items[1].constData());
+        if (!QRegExp("[A-Za-z0-9][A-Za-z0-9._-]{0,63}").exactMatch(name) ||
+            name.contains("..") || name.endsWith(".") ||
+            !(name.endsWith(".sis", Qt::CaseInsensitive) ||
+              name.endsWith(".sisx", Qt::CaseInsensitive))) {
+            adminReply(seq, "ERR PACKAGE_NAME"); return;
+        }
+        if (!QRegExp("[0-9]{1,8}").exactMatch(QString::fromLatin1(items[2])) ||
+            !QRegExp("[0-9a-f]{64}").exactMatch(QString::fromLatin1(items[3]))) {
+            adminReply(seq, "ERR PACKAGE_MANIFEST"); return;
+        }
+        bool sizeOkay = false;
+        const qint64 expectedSize = items[2].toLongLong(&sizeOkay);
+        if (!sizeOkay || expectedSize < 1 || expectedSize > kAdminMaxBytes) {
+            adminReply(seq, "ERR PACKAGE_SIZE"); return;
+        }
+        const QString parent = "E:/Installs";
+        const QDir installDir(parent);
+        if (!installDir.exists() ||
+            installDir.canonicalPath().compare(parent, Qt::CaseInsensitive) != 0 ||
+            QFileInfo(parent).isSymLink()) {
+            adminReply(seq, "ERR INSTALL_DIRECTORY"); return;
+        }
+        const QString path = parent + "/" + name;
+        const QFileInfo info(path);
+        if (!info.exists() || !info.isFile() || info.isSymLink() ||
+            info.size() != expectedSize ||
+            info.canonicalFilePath().compare(path, Qt::CaseInsensitive) != 0) {
+            adminReply(seq, "ERR PACKAGE_MISSING_OR_CHANGED"); return;
+        }
+        QFile staged(path);
+        if (!staged.open(QIODevice::ReadOnly)) {
+            adminReply(seq, "ERR PACKAGE_UNREADABLE"); return;
+        }
+        E7Sha256State hash;
+        e7_sha256_init(&hash);
+        qint64 seen = 0;
+        for (;;) {
+            const QByteArray bytes = staged.read(16384);
+            if (bytes.isEmpty()) break;
+            seen += bytes.size();
+            if (seen > expectedSize) {
+                staged.close();
+                adminReply(seq, "ERR PACKAGE_CHANGED"); return;
+            }
+            e7_sha256_update(&hash,
+                reinterpret_cast<const unsigned char *>(bytes.constData()),
+                static_cast<unsigned int>(bytes.size()));
+        }
+        const bool readOkay = (staged.error() == QFile::NoError);
+        staged.close();
+        unsigned char digest[32];
+        e7_sha256_final(&hash, digest);
+        const QByteArray actual = QByteArray(
+            reinterpret_cast<const char *>(digest), 32).toHex();
+        if (!readOkay || seen != expectedSize || actual != items[3]) {
+            adminReply(seq, "ERR PACKAGE_HASH_MISMATCH"); return;
+        }
+        // Qt 4.7 on Symbian delegates file URLs to the registered native
+        // handler. It may show installer prompts; we do not bypass SWI policy.
+        const bool requested = QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+        if (!requested) {
+            adminReply(seq, "ERR INSTALLER_OPEN_FAILED");
+            state->setText("Unable to open staged SIS installer.");
+            return;
+        }
+        adminReply(seq, "OK LAUNCH_REQUESTED");
+        state->setText("Installer launch requested for " + name +
+                       ". Complete/inspect Belle installer if prompted.");
     }
 
     void listProcesses(int offset) {

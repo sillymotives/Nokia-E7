@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.6.0: Linux host for a user-operated Symbian diagnostic and admin agent.
+"""E7 Bridge v0.7.0: Linux host for a user-operated Symbian diagnostic and admin agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -143,8 +143,10 @@ def normalize_command(text):
         return 'METRICS'
     if verb == 'pull' and arg.lower() == 'probe':
         return 'PULL_PROBE'
-    if verb == 'push' and arg:
-        return 'PUSH ' + arg
+    if verb in ('push', 'deploy') and arg:
+        if '\r' in arg or '\n' in arg:
+            raise BridgeError('Invalid transfer path')
+        return verb.upper() + ' ' + arg
     if verb in ('capture', 'diff') and not arg:
         return verb.upper()
     if verb == 'record':
@@ -173,7 +175,7 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
 
 
 def parse_probe_info(reply):
@@ -356,6 +358,28 @@ def push_file(admin, source, bucket='inbox'):
                 except (OSError, BridgeError):
                     pass
             raise
+
+
+def deploy_package(admin, source):
+    """Stage a signed SIS candidate, then request Belle's installer UI.
+
+    Return value means only that AppArc accepted the file-open request,
+    never that Symbian's installer completed or the app runs correctly.
+    Do not use this pilot to upgrade the currently running E7 Bridge.
+    """
+    name = validate_push_name(source, 'installs')
+    if name.lower().startswith('e7bridge'):
+        raise BridgeError('Pilot deploy refuses an E7 Bridge self-upgrade')
+    source_path = Path(source)
+    if source_path.is_symlink() or not source_path.is_file():
+        raise BridgeError('Deploy source must be a regular non-symlink SIS')
+    if not (0 < source_path.stat().st_size <= ADMIN_MAX_BYTES):
+        raise BridgeError('Deploy package must be 1 byte to 8 MiB')
+    remote, size, digest = push_file(admin, source, 'installs')
+    response = admin.send('LAUNCH {} {} {}'.format(name, size, digest))
+    if response != 'LAUNCH_REQUESTED':
+        raise BridgeError('Unexpected installer-launch acknowledgement')
+    return remote, size, digest
 
 
 def collect_processes(sock, max_entries=2000):
@@ -562,7 +586,7 @@ def print_process_diff(changes):
 
 
 def repl(sock, admin=None):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], help, exit')
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -588,6 +612,7 @@ def repl(sock, admin=None):
                 print('record [N S]  Capture 2-12 samples, every 5-120 seconds (default 3 10)')
                 print('pull probe    Receive only E:/KAI/INDEX.HTM (max 64 KiB; unencrypted LAN)')
                 print('push FILE [inbox|installs]  Transfer <=8 MiB to E:/KAI/INBOX or E:/Installs (no overwrite)')
+                print('deploy FILE.sis  Stage <=8 MiB SIS then ask Belle to launch installer (not confirmation)')
                 print('exit          Close connection and stop bridge')
                 continue
             if cmd == 'QUIT':
@@ -608,6 +633,21 @@ def repl(sock, admin=None):
                 remote, count, digest = push_file(admin, args[0], args[1].lower() if len(args) == 2 else 'inbox')
                 print('Stored on Nokia:', remote)
                 print('Verified remote receipt: {} bytes; SHA-256 {}'.format(count, digest))
+                continue
+            if cmd.startswith('DEPLOY '):
+                if admin is None:
+                    raise BridgeError('Deploy requires an authenticated administrative session')
+                try:
+                    args = shlex.split(cmd[7:])
+                except ValueError as exc:
+                    raise BridgeError('Invalid package path quoting: {}'.format(exc))
+                if len(args) != 1:
+                    raise BridgeError('Usage: deploy LOCALFILE.sis')
+                remote, count, digest = deploy_package(admin, args[0])
+                print('Staged on Nokia:', remote)
+                print('Verified {} bytes; SHA-256 {}'.format(count, digest))
+                print('Belle installer launch requested. THIS DOES NOT CONFIRM INSTALLATION.')
+                print('Check installer UI, signing result, and a post-install file/version separately.')
                 continue
             if cmd == 'PULL_PROBE':
                 path, count, digest = pull_probe(sock)

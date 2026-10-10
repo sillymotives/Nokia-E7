@@ -1,6 +1,6 @@
 # E7 Bridge v0.6: begin owner-controlled remote administration
 
-Status: **physical Nokia E7 positive-path smoke test passed** on 2026-10-10; full on-phone positive and no-overwrite acceptance reported passing. Work started 2026-10-10.
+Status: **v0.6 physical acceptance passed and merged** on 2026-10-10. v0.7 installer-launch extension remains untested on hardware.
 
 ## Product goal
 
@@ -63,15 +63,20 @@ installation; a future upgrade orchestrator must be designed separately.
 - Verify old `ping`, `metrics`, `pull probe`, `capture`, pairing persistence,
   music, Wi-Fi and standby continue working.
 
-We do not merge untested handset-write code into main, and we do not attempt
-protected system changes until the independent recovery gate passes.
+v0.6 was merged only after the operator confirmed actual staging and no-overwrite behaviour. Protected system changes remain gated on independent recovery evidence.
 
-## Physical handset progress (2026-10-10)
+## v0.7 continuation
 
-Operator compiled and installed the signed v0.6.0 application on their Nokia E7 and reported that the matching Sanctuary controller completed `ping`, `info`, `push`, `ls E:/KAI/INBOX`, and `stat` successfully. This verifies a user-initiated bridge session can stage and inspect an ordinary test file on physical Symbian Belle hardware. It does **not** by itself verify no-overwrite refusal on-device, mid-transfer rollback after a disconnect, or actual SIS launching. Those are subsequent regression gates. Linux suite: **65 passing tests**. No protected-system or firmware writes were attempted.
+v0.6 physical staging and duplicate-write checks were operator-confirmed on
+2026-10-10. v0.7 extends the **existing** authenticated admin session with a
+single installer-launch request restricted to a verified staged SIS package;
+see [DEPLOYMENT.md](DEPLOYMENT.md). Neither a launch-request acknowledgement
+nor staged SIS presence proves a successful Symbian software installation.
 
-## Final v0.6 physical check (2026-10-10)
+## v0.6 final physical acceptance (2026-10-10)
 
-After the first successful handset upload, the operator ran the follow-up duplicate-upload and inspection commands, and confirmed they worked. In the intended flow, a repeated `push` is rejected without overwriting the original staged file. They also report the post-test phone regression checks passing. This user-reported handset acceptance complements the 65/65 Python tests; it does not establish remote application installation, privileged-system writing, or failure-path coverage under every possible disconnect.
-
-**Decision:** merge the tested 0.6 read/write staging feature into `main`. Keep remote SIS launch and any privileged capabilities for independent versioned development and acceptance.
+The operator built/installed v0.6 and reported authenticated upload, the
+`ls`/`stat` readback, and rejection of a second upload with the same filename.
+They also reported post-test phone behaviour working. This is operator-observed
+hardware evidence alongside 65 host-side tests, not proof of future privileged
+system operations or silent installs. PR #5 was merged into main.

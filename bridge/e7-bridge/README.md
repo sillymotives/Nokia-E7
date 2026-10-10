@@ -1,13 +1,35 @@
-# E7 Bridge v0.6.0: authenticated write-enabled staging
+# E7 Bridge v0.7.0: staged SIS installer launch
 
 A manually launched Qt 4.7.4 native Symbian Belle agent on the Nokia E7,
-with a Python 3 Debian controller. **v0.6.0 is a SOURCE CANDIDATE** pending
-native compilation and on-phone write tests. v0.4.1 connection persistence is
+with a Python 3 Debian controller. **v0.7.0 has passed its physical first-deployment pilot** on 2026-10-10;
+the operator built the native Symbian bridge and successfully deployed a
+data-only SIS from Sanctuary. The broader post-install regression gate is pending. v0.4.1 connection persistence is
 physically accepted. The v0.5 read-only Field Deck transfer was operator-tested
-and delivered a readable HTML artifact to Sanctuary. This v0.6 branch depends
-on v0.5 and does not bypass its review gate.
+and delivered a readable HTML artifact to Sanctuary. v0.5 and v0.6 have both been merged after physical acceptance.
 
-## New in v0.6: authenticated administrative writes
+## New in v0.7: owner-triggered installer hand-off
+
+**Physical milestone:** the disposable SIS produced the expected 69-byte `C:/Data/E7DeployProbe/probe.txt` on the E7. No app icon is expected for a data-only package. The legacy MakeSIS `/tmp`-path bug was fixed in the probe builder. See [DEPLOYMENT.md](DEPLOYMENT.md); the bridge REPL currently works best with one command pasted at a time.
+
+Once the E7 is manually connected, `deploy ./DisposableProbe.sis` on Sanctuary:
+
+1. stages a bounded, non-overwriting `.sis` or `.sisx` under `E:/Installs`,
+2. verifies length and SHA-256 on the handset immediately before launch, and
+3. asks the platform's registered document handler to open that package via
+   Qt 4.7 `QDesktopServices::openUrl(QUrl::fromLocalFile(...))`.
+
+The signed `LAUNCH` admin command has the same per-session nonce/sequence/HMAC
+protection as upload. Only regular canonically located `E:/Installs` packages
+are eligible. The host reports **LAUNCH_REQUESTED**, never "installed": Belle
+may show certificate/confirmation dialogs, reject the SIS or terminate the
+bridge's active connection. No silent installer API, patch, shell, protected
+filesystem rights or auto-start is introduced. Self-upgrading this live bridge
+is expressly excluded from the first deployment pilot.
+
+Use the **separate disposable data-only SIS test fixture** and the acceptance
+gate in [DEPLOYMENT.md](DEPLOYMENT.md). The known-good v0.6 SIS stays available.
+
+## Existing v0.6: authenticated administrative writes
 
 The E7 accepts **session-bound HMAC-authenticated, monotonically sequenced
 admin commands**, with authenticated replies. The existing E7 Connect button
@@ -41,27 +63,26 @@ path, and be no larger than **64 KiB**. The controller downloads it into a
 private host folder and only publishes the `.htm` after checking the full
 size and SHA-256. Interrupted or inconsistent transfers leave no result.
 
-On Sanctuary, after building/installing the matching v0.6 SIS and connecting:
+On Sanctuary, after building/installing the matching v0.7 SIS and connecting:
 
 ```text
 ping
 info
 pull probe
 push ./bridge-test.txt
-push ./E7Test-0.6.0.sis installs
+deploy ./E7DeployProbe-v0.1.0.sis
 exit
 ```
 
-The `.sis` above is just a *sample local filename*, not a provided package.
-For the first test, push a harmless non-private text file and verify it using
-Symbian File Manager. Do not attempt to self-upgrade the currently running bridge
-through the E7 installer in this first deployment experiment.
+The disposable probe SIS is built with `build/build-install-probe.sh` and
+contains a single data marker, not executable code. Do not attempt to remotely
+self-upgrade the currently running bridge in this deployment experiment.
 
 
 The Wi-Fi protocol **is not encrypted**. The SHA-256 supplied by the phone is
 sent over the same unencrypted connection, so this verifies transfer
-consistency, not protection against an active network attacker. Only the
-known non-private test fixture is allowed. See
+consistency, not protection against an active network attacker. The read-only `pull probe` feature
+still permits only the known non-private fixture. See
 [`TRANSFER-PROBE.md`](TRANSFER-PROBE.md) for exact limitations and acceptance.
 
 ## Existing, physically accepted capabilities
@@ -116,7 +137,7 @@ python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-All **65** host-side Python tests passed in the authoring container for v0.6.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
+All **79** host-side Python tests passed in the authoring container for v0.7.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
 local report permissions, process differences, recording limits, interruptions,
 binary transfer limits/checksums/failure cleanup, and Symbian source assertions and admin write boundaries. It does not replace Symbian compilation or
 on-device measurements.
@@ -140,8 +161,13 @@ build does **not** modify the PocketJS checkout.
 cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.6.0.sis
-sha256sum dist/E7Bridge-v0.6.0.sis
+file dist/E7Bridge-v0.7.0.sis
+sha256sum dist/E7Bridge-v0.7.0.sis
+
+# Separately build the disposable DATA-ONLY installer test package:
+./build/build-install-probe.sh --pocketjs ~/StudioProjects/pocketjs
+file dist/E7DeployProbe-v0.1.0.sis
+sha256sum dist/E7DeployProbe-v0.1.0.sis
 ```
 
 If the native compile or SIS packaging fails, **stop** and inspect the error.
@@ -150,7 +176,7 @@ Do not alter ROMPatcher or force an installation to bypass the failure.
 If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
 Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
 existing PocketJS development signing volume so this has the same signer as
-v0.4.1. Close the previous E7 Bridge before upgrading, and check that the new UI reports `v0.6.0`.
+v0.4.1. Close the previous E7 Bridge before upgrading, and check that the new UI reports `v0.7.0`.
 
 On Debian, substitute Sanctuary's **current** local IPv4 address:
 

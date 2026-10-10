@@ -1,4 +1,4 @@
-"""v0.6 admin upload protocol: transport-integrity, boundaries and aborts.
+"""v0.7 admin upload protocol: transport-integrity, boundaries and aborts.
 
 The fake Symbian endpoint below is a strict model, not a native runtime test.
 """
@@ -25,6 +25,7 @@ class FakeAdminPhone:
         self.seq = 0
         self.current = None
         self.files = {}
+        self.launch_requests = []
         self.errors = []
         self.done = threading.Event()
         self.thread = threading.Thread(target=self.run, daemon=True)
@@ -81,6 +82,18 @@ class FakeAdminPhone:
                     else:
                         self.files[info['destination']] = data
                         self.reply(seq, 'OK STORED {} {}'.format(len(data), info['sha']))
+                elif parts[0] == 'LAUNCH' and len(parts) == 4:
+                    _, name, size, digest = parts
+                    target = 'E:/Installs/' + name
+                    content = self.files.get(target)
+                    if not name.lower().endswith(('.sis', '.sisx')) or '..' in name or '/' in name:
+                        self.reply(seq, 'ERR PACKAGE_NAME')
+                    elif (content is None or len(content) != int(size)
+                          or hashlib.sha256(content).hexdigest() != digest):
+                        self.reply(seq, 'ERR PACKAGE_HASH_MISMATCH')
+                    else:
+                        self.launch_requests.append(target)
+                        self.reply(seq, 'OK LAUNCH_REQUESTED')
                 elif message == 'CANCEL':
                     self.current = None
                     self.reply(seq, 'OK CANCELLED')

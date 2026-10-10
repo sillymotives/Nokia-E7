@@ -118,6 +118,10 @@ Afterwards, manually exit E7 Bridge, check music playback and Wi-Fi, and
 verify the Nokia returns to normal standby. Collect a cold-boot `ps save` only
 if convenient; do **not** modify startup processes based on it yet.
 
+## Early post-boot baseline and modernisation direction
+
+No new Symbian application is required for the next test. Follow [`BOOT-STAGES.md`](BOOT-STAGES.md) to capture early post-boot and settled-state data with v0.4, and compare selected local snapshots using `python3 tools/stage_compare.py`. This is **not** a pre-UI kernel boot trace, and comparing processes does not authorise disabling services. The full [native-first modernisation roadmap](../../docs/MODERNISATION-ROADMAP.md) prioritises verifiable file sync, safe modern network gateways and native workflows.
+
 ## Developer layout
 
 - `phone/main.cpp` — Qt 4.7.4 and Symbian native read-only agent.

@@ -317,3 +317,12 @@ if convenient; do **not** modify startup processes based on it yet.
   https://github.com/pocket-nexus/pocketjs/blob/main/docs/SYMBIAN_E7.md
 
 - `TRANSFER-PROBE.md` — fixed-file wireless transfer protocol, test and rollback gate.
+
+## Offline service triage (experimental)
+
+`tools/service_triage.py` compares two saved v0.9 inventory JSON files and,
+optionally, reads existing Dumberdore ROM metadata. It produces a private,
+read-only investigation report distinguishing installed SIS entries, running
+processes, ROM binaries and embedded startup-resource **strings**. It does not
+modify the E7, infer package ownership or propose uninstalling anything.
+See [SERVICE-TRIAGE.md](SERVICE-TRIAGE.md) for exact usage and caveats.

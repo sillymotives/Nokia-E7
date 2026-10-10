@@ -22,17 +22,22 @@ LABEL = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,31}\Z')
 VERSION = re.compile(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}\Z')
 UID = re.compile(r'0x[0-9A-F]{8}\Z')
 
-# These terms are investigation leads, NOT claims a service is dead or removable.
-# The device's working music, Wi-Fi, phone UI and system services are never
-# classified as safe to disable by these heuristics.
+# These *anchored, narrow* patterns are review leads, not claims a service
+# is dead or removable. A substring search for 'ovi' wrongly flagged
+# ordinary words such as 'provider' and 'provisioning' on the physical E7.
+# The device's working music, Wi-Fi and core services are never classified as
+# safe to disable by these heuristics.
 REVIEW_TERMS = (
-    ('ovi', 'Historical Ovi-branded integration'),
-    ('nokia store', 'Store-related integration to investigate'),
-    ('nokia account', 'Online account integration to investigate'),
-    ('nokia social', 'Social service integration to investigate'),
-    ('nokia messaging', 'Messaging service integration to investigate'),
-    ('nokia chat', 'Chat service integration to investigate'),
-    ('nokia notifications', 'Online notification service to investigate'),
+    (r'(?<![a-z0-9])ovi', 'Historical Ovi-branded integration'),
+    (r'\bnokia[\s_-]*store', 'Store-related integration to investigate'),
+    (r'\bnokia[\s_-]*account', 'Online account integration to investigate'),
+    (r'\bnokia[\s_-]*social', 'Social service integration to investigate'),
+    (r'\bnokia[\s_-]*messaging', 'Messaging service integration to investigate'),
+    (r'\bnokia[\s_-]*chat', 'Chat service integration to investigate'),
+    (r'\bnokia[\s_-]*notifications', 'Online notification service to investigate'),
+    (r'\bnokia[\s_-]*analytics', 'Analytics component to investigate'),
+    (r'(?<![a-z0-9])(?:norton|symantec)',
+     'Norton/Symantec package: verify active components and dependencies'),
 )
 
 class InventoryError(ValueError):
@@ -204,7 +209,8 @@ def leads(snapshot):
     out = []
     for row in snapshot['packages']:
         low = row['name'].casefold()
-        match = next(((needle, reason) for needle, reason in REVIEW_TERMS if needle in low), None)
+        match = next(((needle, reason) for needle, reason in REVIEW_TERMS
+                      if re.search(needle, low)), None)
         if not match:
             continue
         stem = _fold(row['name'])

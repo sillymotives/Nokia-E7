@@ -1,4 +1,28 @@
-# E7 Bridge host v0.8.1: authenticated write batches
+# E7 Bridge host v0.9.0: private package and process baseline
+
+Sanctuary-only update for the **unchanged v0.8.0** Symbian agent. Full package registry, process and raw-metric snapshots are captured read-only, compared offline, and saved privately. The previously accepted write-capable batch executor remains available.
+
+## Start here
+
+```bash
+cd ~/Downloads/e7-bridge-v0.9.0
+python3 -m unittest discover -s tests -q
+bash ./build/serve-on-sanctuary.sh
+```
+
+Then connect E7 Bridge v0.8.0 on the Nokia and run:
+
+```text
+ping
+info
+baseline capture idle
+baseline capture music
+baseline diff
+```
+
+See [INVENTORY.md](INVENTORY.md) for expected outputs, privacy, limitations and physical acceptance. **No Nokia reinstall.**
+
+## Previous functionality: v0.8.1 write batches
 
 Sanctuary's controller can now run deliberate multi-step administration
 jobs against the **existing v0.8.0 phone agent**. No handset software update
@@ -65,7 +89,7 @@ For starting the matching host without guessing which directory you're in:
 
 ```bash
 ./build/serve-on-sanctuary.sh              # chooses the Linux route's IPv4
-./build/serve-on-sanctuary.sh 192.168.1.37 # or specify the actual Sanctuary LAN IPv4
+./build/serve-on-sanctuary.sh 192.168.1.20 # or specify the actual Sanctuary LAN IPv4
 ```
 
 The starter changes to the correct project directory, so `batch ./examples/acceptance.batch`

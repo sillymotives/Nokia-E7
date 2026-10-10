@@ -87,3 +87,7 @@ The host now supports explicitly requested, bounded, audited `batch --write`
 jobs composed of existing authenticated `push`, `deploy` and read-only checks.
 This **does not** change Nokia-side capabilities. See `ADMIN-BATCHES.md` for
 preflight, journal, safe resume and scope details.
+
+## v0.9 inventory
+
+See [INVENTORY.md](INVENTORY.md). All package/process metadata is read-only and stored privately on Sanctuary. Historical service name hints are not system-modification authorisation. The phone v0.8.0 app remains unchanged.

@@ -1,6 +1,6 @@
 # E7 Bridge v0.6: begin owner-controlled remote administration
 
-Status: **v0.6 physical acceptance passed and merged** on 2026-10-10. v0.7 installer-launch extension also passed on-device acceptance. v0.8 registry queries remain untested on hardware.
+Status: **v0.6 physical acceptance passed and merged** on 2026-10-10. v0.7 installer-launch extension also passed on-device acceptance. v0.8 registry queries have passed physical acceptance.
 
 ## Product goal
 
@@ -80,3 +80,10 @@ The operator built/installed v0.6 and reported authenticated upload, the
 They also reported post-test phone behaviour working. This is operator-observed
 hardware evidence alongside 65 host-side tests, not proof of future privileged
 system operations or silent installs. PR #5 was merged into main.
+
+## Sanctuary host v0.8.1 write-batch extension
+
+The host now supports explicitly requested, bounded, audited `batch --write`
+jobs composed of existing authenticated `push`, `deploy` and read-only checks.
+This **does not** change Nokia-side capabilities. See `ADMIN-BATCHES.md` for
+preflight, journal, safe resume and scope details.

@@ -1,0 +1,4 @@
+# TEMPLATE ONLY: replace with a new disposable signed SIS filename.
+# The final command hands the SIS to Belle, it does not confirm installation.
+# verify 0xE94B7002 0.1.0
+# deploy ./YourDisposableTest.sis

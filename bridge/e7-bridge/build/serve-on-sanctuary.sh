@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start matching v0.8 host controller from ANY working directory.
+# Start host v0.8.1 controller for existing v0.8 phone from ANY working directory.
 # Does not change the E7 and does not expose the bridge on 0.0.0.0.
 set -euo pipefail
 
@@ -28,5 +28,5 @@ except ValueError as exc:
     raise SystemExit('Invalid Sanctuary IPv4 address: '+str(exc))
 PY
 cd -- "$project"
-echo "Sanctuary bridge v0.8.0 listening on $bind (enter this IPv4 on E7 if different)."
+echo "Sanctuary bridge host v0.8.1 for E7 agent v0.8.0 listening on $bind (enter this IPv4 on E7 if different)."
 exec python3 host/e7_bridge.py serve --bind "$bind"

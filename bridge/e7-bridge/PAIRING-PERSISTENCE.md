@@ -1,6 +1,6 @@
 # E7 Bridge 0.4.1: remembered connection gate
 
-Prepared: 2026-10-10. **Status: source candidate; Symbian build/on-device acceptance pending.**
+Prepared: 2026-10-10. **Status: physical E7 acceptance passed (operator confirmed).**
 
 ## Requirement
 
@@ -25,3 +25,7 @@ When the operator unchecks Remember, the saved file's keys are cleared. `Forget 
 7. Confirm native music playback, Wi-Fi and standby work after exit; confirm no automatic network activity after launch.
 
 No firmware updates, startup manipulation, automatic pairing or new capabilities are authorised. If SIS build fails or the app won't connect, reinstall the already physically accepted v0.4.0 signed SIS (same UID and signer). Uninstall/reinstall may affect private settings; preserve any other desired app data separately.
+
+## Physical acceptance result (2026-10-10)
+
+The user reports that the signed v0.4.1 SIS was installed on the Nokia E7 and the bridge worked with Sanctuary. The last successful connection was recalled after closing and reopening the app, manual reconnect succeeded, wrong-key protection and Forget saved pairing worked, and native music, Wi-Fi and standby were still functional. These are handset-operator observations, not a hardware CI run. **The persistence gate is passed; this does not authorise firmware changes or broad file access.**

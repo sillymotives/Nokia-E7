@@ -15,7 +15,7 @@ hardware automation or evidence of long-term resource consumption.
 - The default **Remember IP + key on this phone** checkbox enables persistence; disable it to clear saved settings immediately, or press **Forget saved pairing** to clear both the saved values and current text fields.
 - The key is stored as **unencrypted local configuration** in the app's own Symbian private UID3 directory on phone memory (C:); it is not written to publicly readable `C:/data/.config` and is never committed to Git. Device-level compromise or backups can still expose it.
 - Persistence occurs **only after successful mutual HMAC authentication**. Failed connection attempts never replace the last valid values. **No auto-connect**, new system capability, remote write, firmware modification, or protocol change. The host v0.4 controller remains compatible.
-- `E7Bridge-v0.4.1.sis` is an in-place signed upgrade using the existing UID and signing identity. Native SDK compilation and phone-side save/load/forget tests are required before merging or deploying.
+- `E7Bridge-v0.4.1.sis` was built and installed on the physical Nokia E7 with the existing development UID and signing setup. Phone-side save/relaunch/incorrect-key/forget checks and music, Wi-Fi and standby regression checks were reported passing on 2026-10-10.
 
 See [PAIRING-PERSISTENCE.md](PAIRING-PERSISTENCE.md) for the test/rollback gate.
 

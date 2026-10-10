@@ -1,7 +1,7 @@
-// E7 Bridge v0.5.0: native Qt 4.7.4 agent for Nokia Belle.
-// Manually launched, read-only, outbound TCP, HMAC authenticated.
-// Remote operations remain read-only. Only private local pairing settings are written.
-// Never executes shell commands or runs at boot.
+// E7 Bridge v0.6.0: native Qt 4.7.4 agent for Nokia Belle.
+// Manually launched, outbound TCP, HMAC authenticated.
+// Host may send signed admin writes to public data storage / package staging.
+// No raw shell, boot service, or firmware modification commands.
 #include <QtGui/QApplication>
 #include <QtGui/QWidget>
 #include <QtGui/QLabel>
@@ -18,6 +18,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QFile>
+#include <QtCore/QByteArray>
 #include <QtCore/QSettings>
 #include <QtCore/QRegExp>
 #include <QtCore/QStringList>
@@ -34,6 +35,9 @@ static const int kMaxLine = 4096;
 static const char kProbePath[] = "E:/KAI/INDEX.HTM";
 static const qint64 kProbeLimit = 65536;
 static const qint64 kProbeChunk = 1024;
+static const qint64 kAdminChunk = 2048;
+static const qint64 kAdminMaxBytes = 8388608; // 8 MiB per transfer, streamed.
+
 
 // HMAC-SHA256 must match the Debian Python hmac module exactly.
 // Qt 4.7.4 lacks a SHA-256 hash enum, so use the small portable
@@ -75,10 +79,11 @@ class E7Bridge : public QWidget {
 public:
     E7Bridge(QWidget *parent = 0)
         : QWidget(parent), socket(new QTcpSocket(this)), session(0),
-          authenticated(false), awaitingReady(false), wantConnection(false) {
+          authenticated(false), awaitingReady(false), wantConnection(false),
+          adminSequence(0), uploadActive(false), uploadSize(0), uploadReceived(0) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.5.0\nRead-only control over local Wi-Fi", this);
+            "E7 Bridge v0.6.0\nAuthenticated diagnostic + admin link", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -150,6 +155,8 @@ private slots:
         }
         authenticated = false;
         awaitingReady = false;
+        adminSequence = 0;
+        abortUpload();
         wantConnection = true;
         // Freeze validated input until the handshake completes or fails.
         server->setEnabled(false);
@@ -181,6 +188,8 @@ private slots:
         socket->connectToHost(server->text().trimmed(), kPort);
     }
     void stopLink() {
+        abortUpload();
+        adminSequence = 0;
         wantConnection = false;
         socket->abort();
         authenticated = false;
@@ -197,6 +206,8 @@ private slots:
     }
     void onConnected() { state->setText("Connected; authenticating..."); }
     void onDisconnected() {
+        abortUpload();
+        adminSequence = 0;
         wantConnection = false;
         authenticated = false;
         awaitingReady = false;
@@ -206,12 +217,14 @@ private slots:
         state->setText("Disconnected. Reconnect manually when ready.");
     }
     void onSocketError(QAbstractSocket::SocketError) {
+        abortUpload();
         wantConnection = false;
         server->setEnabled(true);
         key->setEnabled(true);
         state->setText("Network error: " + socket->errorString());
     }
     void onSessionError(QNetworkSession::SessionError) {
+        abortUpload();
         wantConnection = false;
         server->setEnabled(true);
         key->setEnabled(true);
@@ -255,6 +268,7 @@ private slots:
                 return;
             }
             authenticated = true;
+            adminSequence = 0;
             awaitingReady = false;
             key->setEnabled(false);
             if (remember->isChecked()) {
@@ -288,10 +302,11 @@ private slots:
             key->setEnabled(false);
             return;
         }
+        if (line.startsWith("ADM ")) { handleAdminLine(line); return; }
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.5.0");
+                     "; E7 Bridge v0.6.0");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
@@ -343,6 +358,195 @@ private slots:
         }
         sendLine("ERR UNKNOWN_COMMAND");
     }
+    // Administrative packets are MACed separately from the handshake:
+    // HMAC(key, "admin:" + nonce + ":" + seq + ":" + verb + args).
+    // Replies are also MACed and bind the same nonce/sequence. No replay
+    // within the current authenticated connection. The channel is NOT encrypted.
+    static bool equalMac(const QByteArray &a, const QByteArray &b) {
+        if (a.size() != 64 || b.size() != 64) return false;
+        unsigned char mismatch = 0;
+        for (int i = 0; i < 64; ++i)
+            mismatch |= static_cast<unsigned char>(a.at(i) ^ b.at(i));
+        return mismatch == 0;
+    }
+    void adminReply(int seq, const QByteArray &body) {
+        const QByteArray number = QByteArray::number(seq);
+        const QByteArray mac = hmac256(key->text().trimmed().toLower().toLatin1(),
+            "reply:" + challengeNonce + ":" + number + ":" + body);
+        sendLine("ADMREPLY " + number + " " + body + " " + mac);
+    }
+    void handleAdminLine(const QByteArray &line) {
+        const int first = line.indexOf(' ', 4);
+        const int last = line.lastIndexOf(' ');
+        if (first < 5 || last <= first + 1) {
+            sendLine("ERR ADMIN_FORMAT"); return;
+        }
+        const QByteArray seqBytes = line.mid(4, first - 4);
+        if (!QRegExp("[1-9][0-9]{0,7}").exactMatch(QString::fromLatin1(seqBytes))) {
+            sendLine("ERR ADMIN_SEQUENCE"); return;
+        }
+        bool ok = false;
+        const int seq = seqBytes.toInt(&ok);
+        if (!ok || seq != adminSequence + 1) {
+            sendLine("ERR ADMIN_SEQUENCE"); return;
+        }
+        const QByteArray command = line.mid(first + 1, last - first - 1);
+        const QByteArray remoteMac = line.mid(last + 1);
+        if (command.size() > kMaxLine - 100 || command.isEmpty()) {
+            sendLine("ERR ADMIN_FORMAT"); return;
+        }
+        const QByteArray expected = hmac256(
+            key->text().trimmed().toLower().toLatin1(),
+            "admin:" + challengeNonce + ":" + seqBytes + ":" + command);
+        if (!equalMac(remoteMac, expected)) {
+            sendLine("ERR ADMIN_AUTH"); return;
+        }
+        adminSequence = seq;
+        const QList<QByteArray> items = command.split(' ');
+        if (items.size() == 5 && items[0] == "BEGIN") {
+            beginUpload(seq, items);
+        } else if (items.size() == 3 && items[0] == "CHUNK") {
+            uploadChunk(seq, items);
+        } else if (items.size() == 1 && items[0] == "FINISH") {
+            finishUpload(seq);
+        } else if (items.size() == 1 && items[0] == "CANCEL") {
+            abortUpload();
+            adminReply(seq, "OK CANCELLED");
+        } else {
+            adminReply(seq, "ERR ADMIN_UNKNOWN");
+        }
+    }
+    void abortUpload() {
+        if (uploadFile.isOpen()) uploadFile.close();
+        if (!uploadTemp.isEmpty()) QFile::remove(uploadTemp);
+        uploadTemp.clear();
+        uploadTarget.clear();
+        uploadExpected.clear();
+        uploadSize = 0;
+        uploadReceived = 0;
+        uploadActive = false;
+    }
+    void beginUpload(int seq, const QList<QByteArray> &items) {
+        if (uploadActive) { adminReply(seq, "ERR UPLOAD_BUSY"); return; }
+        const QByteArray bucket = items[1];
+        const QString name = QString::fromLatin1(items[2].constData());
+        const QByteArray sizeString = items[3];
+        const QByteArray hash = items[4];
+        if (!QRegExp("[A-Za-z0-9][A-Za-z0-9._-]{0,63}").exactMatch(name) ||
+            name.contains("..") || name.endsWith(".")) {
+            adminReply(seq, "ERR NAME_REJECTED"); return;
+        }
+        if ((bucket != "inbox" && bucket != "installs") ||
+            (bucket == "installs" &&
+             !(name.endsWith(".sis", Qt::CaseInsensitive) ||
+               name.endsWith(".sisx", Qt::CaseInsensitive)))) {
+            adminReply(seq, "ERR DESTINATION_REJECTED"); return;
+        }
+        if (!QRegExp("[0-9]{1,8}").exactMatch(QString::fromLatin1(sizeString)) ||
+            !QRegExp("[0-9a-f]{64}").exactMatch(QString::fromLatin1(hash))) {
+            adminReply(seq, "ERR MANIFEST_REJECTED"); return;
+        }
+        bool sizeOkay = false;
+        const qint64 size = sizeString.toLongLong(&sizeOkay);
+        if (!sizeOkay || size > kAdminMaxBytes) {
+            adminReply(seq, "ERR TOO_LARGE"); return;
+        }
+        const QString parent = bucket == "installs" ? "E:/Installs" : "E:/KAI/INBOX";
+        // Canonical check catches redirected/Symbian symlinked destination dirs.
+        // E: is deliberately user storage, not sys/bin or ROM Z:.
+        // Inspect existing ancestors BEFORE creating any directory.
+        // A redirected E:/KAI parent must never cause us to create elsewhere.
+        if (QDir("E:/").canonicalPath().compare("E:/", Qt::CaseInsensitive) != 0 ||
+            (bucket == "inbox" && QDir("E:/KAI").exists() &&
+             QDir("E:/KAI").canonicalPath().compare("E:/KAI", Qt::CaseInsensitive) != 0)) {
+            adminReply(seq, "ERR STORAGE_REDIRECTED"); return;
+        }
+        if (!QDir().mkpath(parent) ||
+            QDir(parent).canonicalPath().compare(parent, Qt::CaseInsensitive) != 0 ||
+            QFileInfo(parent).isSymLink()) {
+            adminReply(seq, "ERR STORAGE_UNAVAILABLE"); return;
+        }
+        const QString finalName = parent + "/" + name;
+        if (QFileInfo(finalName).exists() || QFileInfo(finalName).isSymLink()) {
+            adminReply(seq, "ERR EXISTS"); return;
+        }
+        const QString temp = parent + "/.e7bridge-" + QString::fromLatin1(challengeNonce) + ".part";
+        if (QFileInfo(temp).exists() || QFileInfo(temp).isSymLink()) {
+            adminReply(seq, "ERR STALE_STAGE"); return;
+        }
+        uploadFile.setFileName(temp);
+        if (!uploadFile.open(QIODevice::WriteOnly)) {
+            adminReply(seq, "ERR CANNOT_CREATE_STAGE"); return;
+        }
+        uploadTemp = temp;
+        uploadTarget = finalName;
+        uploadExpected = hash;
+        uploadSize = size;
+        uploadReceived = 0;
+        uploadActive = true;
+        e7_sha256_init(&uploadHash);
+        adminReply(seq, "OK READY");
+    }
+    void uploadChunk(int seq, const QList<QByteArray> &items) {
+        if (!uploadActive) { adminReply(seq, "ERR NO_UPLOAD"); return; }
+        const QByteArray offsetString = items[1];
+        if (!QRegExp("[0-9]{1,8}").exactMatch(QString::fromLatin1(offsetString))) {
+            adminReply(seq, "ERR OFFSET_INVALID"); return;
+        }
+        bool ok = false;
+        const qint64 offset = offsetString.toLongLong(&ok);
+        if (!ok || offset != uploadReceived) {
+            adminReply(seq, "ERR OFFSET_MISMATCH"); return;
+        }
+        const QByteArray encoded = items[2];
+        const QByteArray block = QByteArray::fromBase64(encoded);
+        if (block.isEmpty() || block.size() > kAdminChunk ||
+            block.toBase64() != encoded || uploadReceived + block.size() > uploadSize) {
+            adminReply(seq, "ERR CHUNK_INVALID"); return;
+        }
+        const qint64 written = uploadFile.write(block);
+        if (written != block.size()) {
+            abortUpload();
+            adminReply(seq, "ERR WRITE_FAILED"); return;
+        }
+        e7_sha256_update(&uploadHash,
+            reinterpret_cast<const unsigned char *>(block.constData()),
+            static_cast<unsigned int>(block.size()));
+        uploadReceived += block.size();
+        adminReply(seq, "OK CHUNK");
+    }
+    void finishUpload(int seq) {
+        if (!uploadActive) { adminReply(seq, "ERR NO_UPLOAD"); return; }
+        if (uploadReceived != uploadSize) {
+            adminReply(seq, "ERR INCOMPLETE"); return;
+        }
+        if (!uploadFile.flush()) {
+            abortUpload(); adminReply(seq, "ERR FLUSH_FAILED"); return;
+        }
+        uploadFile.close();
+        unsigned char digest[32];
+        e7_sha256_final(&uploadHash, digest);
+        const QByteArray computed = QByteArray(
+            reinterpret_cast<const char *>(digest), 32).toHex();
+        if (computed != uploadExpected) {
+            abortUpload(); adminReply(seq, "ERR HASH_MISMATCH"); return;
+        }
+        if (QFileInfo(uploadTarget).exists() ||
+            !QFile::rename(uploadTemp, uploadTarget)) {
+            abortUpload(); adminReply(seq, "ERR PUBLISH_FAILED"); return;
+        }
+        const QByteArray result = "OK STORED " + QByteArray::number(uploadSize) +
+                                  " " + computed;
+        // Publish succeeded. Do not remove the newly renamed destination.
+        uploadTemp.clear();
+        uploadTarget.clear();
+        uploadExpected.clear();
+        uploadSize = 0;
+        uploadReceived = 0;
+        uploadActive = false;
+        adminReply(seq, result);
+    }
+
     void listProcesses(int offset) {
 #ifdef Q_OS_SYMBIAN
         // TFindProcess returns names only. We do not open, kill, or control a process.
@@ -571,6 +775,15 @@ private:
     bool authenticated;
     bool awaitingReady;
     bool wantConnection;
+    int adminSequence;
+    bool uploadActive;
+    QFile uploadFile;
+    QString uploadTemp;
+    QString uploadTarget;
+    QByteArray uploadExpected;
+    qint64 uploadSize;
+    qint64 uploadReceived;
+    E7Sha256State uploadHash;
 };
 
 int main(int argc, char *argv[]) {

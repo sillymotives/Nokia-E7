@@ -191,8 +191,8 @@ class ProbeProtocolTests(unittest.TestCase):
         self.assertIn('file->open(QIODevice::ReadOnly)', cpp)
         self.assertIn('info.canonicalFilePath()', cpp)
         self.assertIn('e7_sha256_update', cpp)
-        self.assertNotIn('QIODevice::WriteOnly', cpp)
-        self.assertNotIn('FILEPUT', cpp)
+        self.assertIn('file->open(QIODevice::ReadOnly)', cpp)
+        self.assertIn('void beginUpload(', cpp)
         self.assertNotIn('FILEDELETE', cpp)
 
 

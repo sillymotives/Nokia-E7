@@ -1,14 +1,39 @@
-# E7 Bridge v0.5.0: bounded cable-free file-transfer proof
+# E7 Bridge v0.6.0: authenticated write-enabled staging
 
-A manually launched, Qt 4.7.4 native Symbian Belle agent on a real Nokia E7,
-with a Python 3 Debian controller. **v0.5.0 remains a source candidate:** its
-Linux tests pass, but it has not yet compiled or run on the physical E7.
-The previous v0.4.1 release is physically accepted, including last-successful
-connection persistence, wrong-key handling, Forget, and native-app regression.
+A manually launched Qt 4.7.4 native Symbian Belle agent on the Nokia E7,
+with a Python 3 Debian controller. **v0.6.0 is a SOURCE CANDIDATE** pending
+native compilation and on-phone write tests. v0.4.1 connection persistence is
+physically accepted. The v0.5 read-only Field Deck transfer was operator-tested
+and delivered a readable HTML artifact to Sanctuary. This v0.6 branch depends
+on v0.5 and does not bypass its review gate.
+
+## New in v0.6: authenticated administrative writes
+
+The E7 accepts **session-bound HMAC-authenticated, monotonically sequenced
+admin commands**, with authenticated replies. The existing E7 Connect button
+is the session boundary: **no extra approval pop-up per file**. The wire remains
+unencrypted, so use the existing trusted LAN (payload contents are visible on it).
+
+- `push LOCALFILE` stages a file up to **8 MiB** at `E:/KAI/INBOX/<filename>`.
+- `push LOCALFILE installs` stages a `.sis`/`.sisx` package at `E:/Installs/`.
+- The host checks input size and SHA-256 before transfer. The phone streams
+  binary-safe 2048-byte chunks to a same-directory temporary file, verifies
+  exact size/hash, and publishes only on a successful final rename.
+- Interrupted uploads are discarded on disconnect. **Existing target filenames
+  are never overwritten.** There is no arbitrary destination, delete, process
+  killing, installer bypass, remote code execution, or service modification.
+- Added **WriteUserData**, a basic Symbian capability; E:/ user storage writes
+  are possible without AllFiles/TCB. Signing/install on real handset must be
+  tested separately; neither capability flags nor a SIS imply actual root.
+
+This is the start of a broader **owner-authorised administration programme**.
+See [ADMINISTRATION.md](ADMINISTRATION.md) for the privilege map and later
+possible device-admin capabilities, including app deployment and system-area
+modifications only with a tested recovery path.
 
 ## First wireless transfer: `pull probe`
 
-The Nokia can now expose exactly **one already deployed synthetic file**,
+The Nokia still exposes exactly **one already deployed synthetic file**,
 `E:/KAI/INDEX.HTM`, via two new authenticated-session read-only wire commands:
 `FILEINFO` and `FILECHUNK OFFSET`. It will not read arbitrary paths. The fixed
 source must be an ordinary non-symlinked file, canonically matching the expected
@@ -16,14 +41,22 @@ path, and be no larger than **64 KiB**. The controller downloads it into a
 private host folder and only publishes the `.htm` after checking the full
 size and SHA-256. Interrupted or inconsistent transfers leave no result.
 
-On Sanctuary, after building/installing the matching v0.5 SIS and connecting:
+On Sanctuary, after building/installing the matching v0.6 SIS and connecting:
 
 ```text
 ping
 info
 pull probe
+push ./bridge-test.txt
+push ./E7Test-0.6.0.sis installs
 exit
 ```
+
+The `.sis` above is just a *sample local filename*, not a provided package.
+For the first test, push a harmless non-private text file and verify it using
+Symbian File Manager. Do not attempt to self-upgrade the currently running bridge
+through the E7 installer in this first deployment experiment.
+
 
 The Wi-Fi protocol **is not encrypted**. The SHA-256 supplied by the phone is
 sent over the same unencrypted connection, so this verifies transfer
@@ -63,10 +96,10 @@ preserved as `unavailable`, not silently replaced with plausible-looking data.
 ## Safety and trust model
 
 - Same application UID `0xE94B7001`, same development signing identity, version
-  raised to `0.5.0`. Original Nokia firmware is *not modified*.
-- Exactly the existing `NetworkServices ReadUserData` capabilities: no additional
-  privileged rights, process control, property changes, autostart or remote shell.
-- Native `HAL::Get` and `RProperty::Get` only; no write-mode operations.
+  raised to `0.6.0`. Original Nokia firmware is *not modified*.
+- `NetworkServices ReadUserData WriteUserData` capabilities (one added basic
+  user-data write capability); no AllFiles/TCB, process control or remote shell.
+- Native `HAL::Get` and `RProperty::Get` stay read-only; local file writes only through the signed E: staging protocol.
 - Host stores snapshots under `~/.local/share/e7-bridge/snapshots/` with new
   files created as mode `0600`. It does not upload telemetry to third parties.
 - HMAC challenge authentication remains, but **the Wi-Fi link is not encrypted**.
@@ -83,9 +116,9 @@ python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-All **54** host-side Python tests passed in the authoring container for v0.5.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
+All **65** host-side Python tests passed in the authoring container for v0.6.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
 local report permissions, process differences, recording limits, interruptions,
-binary transfer limits/checksums/failure cleanup, and read-only source assertions. It does not replace Symbian compilation or
+binary transfer limits/checksums/failure cleanup, and Symbian source assertions and admin write boundaries. It does not replace Symbian compilation or
 on-device measurements.
 
 To run the simulator, use an **existing** pairing key in
@@ -107,8 +140,8 @@ build does **not** modify the PocketJS checkout.
 cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.5.0.sis
-sha256sum dist/E7Bridge-v0.5.0.sis
+file dist/E7Bridge-v0.6.0.sis
+sha256sum dist/E7Bridge-v0.6.0.sis
 ```
 
 If the native compile or SIS packaging fails, **stop** and inspect the error.
@@ -117,7 +150,7 @@ Do not alter ROMPatcher or force an installation to bypass the failure.
 If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
 Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
 existing PocketJS development signing volume so this has the same signer as
-v0.4.1. Close v0.4.1 first, and check that the new UI reports `v0.5.0`.
+v0.4.1. Close the previous E7 Bridge before upgrading, and check that the new UI reports `v0.6.0`.
 
 On Debian, substitute Sanctuary's **current** local IPv4 address:
 
@@ -126,7 +159,7 @@ python3 host/e7_bridge.py serve --bind YOUR_CURRENT_DEBIAN_IP
 ```
 
 Manually start E7 Bridge on the E7 and connect with the same pairing key.
-Use `help` for a complete list. Recommended first v0.5 physical acceptance:
+Use `help` for a complete list. Recommended first v0.6 physical acceptance:
 
 ```text
 ping
@@ -147,7 +180,7 @@ if convenient; do **not** modify startup processes based on it yet.
 
 ## Developer layout
 
-- `phone/main.cpp` — Qt 4.7.4 and Symbian native read-only agent.
+- `phone/main.cpp` — Qt 4.7.4 and Symbian native diagnostic/admin agent.
 - `phone/sha256_compat.h` — SHA-256 HMAC compatible with Qt 4.7.4.
 - `host/e7_bridge.py` — Python terminal, capture/diff/record commands.
 - `tests/fake_phone.py` — synthetic reply source for safe host tests.

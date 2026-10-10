@@ -50,19 +50,20 @@ class SavedPairingSafety(unittest.TestCase):
         self.assertIn('server->clear()',CPP)
         self.assertIn('key->clear()',CPP)
 
-    def test_in_place_upgrade_no_new_capabilities(self):
+    def test_in_place_upgrade_with_one_basic_write_capability(self):
         self.assertIn('TARGET.UID3 = 0xE94B7001',PRO)
-        self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData',PRO)
-        self.assertIn('E7Bridge-v0.5.0.sis',BUILD)
-        self.assertIn('($uid),0,5,0',BUILD)
-        self.assertIn('E7 Bridge v0.5.0',CPP)
+        self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData',PRO)
+        self.assertIn('E7Bridge-v0.6.0.sis',BUILD)
+        self.assertIn('($uid),0,6,0',BUILD)
+        self.assertIn('E7 Bridge v0.6.0',CPP)
 
-    def test_network_protocol_remains_read_only(self):
+    def test_network_protocol_does_not_offer_system_mutation(self):
         self.assertNotIn('QProcess',CPP)
         self.assertNotIn('RProperty::Set',CPP)
         self.assertNotIn('HAL::Set',CPP)
-        self.assertNotIn('QFile::WriteOnly',CPP)
-        self.assertNotIn('QFile::Remove',CPP)
+        self.assertIn('void handleAdminLine(',CPP)
+        self.assertIn('void beginUpload(',CPP)
+        self.assertIn('void abortUpload()',CPP)
 
 if __name__ == '__main__':
     unittest.main()

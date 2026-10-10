@@ -9,8 +9,9 @@ HEADERS += sha256_compat.h
 symbian {
     # Private/unprotected development UID. This is NOT PocketJS's probe UID.
     TARGET.UID3 = 0xE94B7001
-    TARGET.CAPABILITY = NetworkServices ReadUserData
-    # Only HAL::Get and RProperty::Get are used for metrics. No new capability.
+    TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData
+    # WriteUserData permits E: user storage staging; not AllFiles/TCB.
+    # HAL::Get and RProperty::Get remain read-only.
     LIBS += -lhal
     TARGET.EPOCSTACKSIZE = 0x14000
     TARGET.EPOCHEAPSIZE = 0x20000 0x800000

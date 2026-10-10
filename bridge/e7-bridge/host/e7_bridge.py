@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.5.0: Linux host for a user-operated, read-only Symbian agent.
+"""E7 Bridge v0.6.0: Linux host for a user-operated Symbian diagnostic and admin agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -18,6 +18,8 @@ import sys
 import datetime
 import json
 import re
+import shlex
+import stat
 import time
 from collections import Counter
 
@@ -29,6 +31,9 @@ SNAPSHOT_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'snapshots'
 PROBE_PATH = 'E:/KAI/INDEX.HTM'  # Exactly one nonprivate fixture on the E7.
 PROBE_CHUNK = 1024
 PROBE_MAX_BYTES = 65536
+ADMIN_MAX_BYTES = 8388608
+ADMIN_CHUNK = 2048
+ADMIN_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z')
 RECEIVE_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'received'
 METRIC_FIELDS = ('ram_total_bytes', 'ram_free_bytes', 'battery_level_raw', 'battery_status_raw', 'charging_status_raw')
 
@@ -95,6 +100,7 @@ def authenticate(sock, key):
     if not hmac.compare_digest(bits[2], expected_auth(key, 'device:' + nonce)):
         raise BridgeError('Device authentication failed')
     send_line(sock, PROTO + ' READY ' + expected_auth(key, 'host:' + nonce))
+    return nonce
 
 
 def request(sock, command):
@@ -137,6 +143,8 @@ def normalize_command(text):
         return 'METRICS'
     if verb == 'pull' and arg.lower() == 'probe':
         return 'PULL_PROBE'
+    if verb == 'push' and arg:
+        return 'PUSH ' + arg
     if verb in ('capture', 'diff') and not arg:
         return verb.upper()
     if verb == 'record':
@@ -165,7 +173,7 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], help, exit')
 
 
 def parse_probe_info(reply):
@@ -241,6 +249,113 @@ def pull_probe(sock, directory=None):
             temporary.unlink()
         except FileNotFoundError:
             pass
+
+
+class AdminSession:
+    """Per-command request/reply HMAC tied to the session nonce and sequence.
+
+    This is authenticated integrity, NOT payload confidentiality.
+    No side effect occurs unless the Nokia has explicitly connected first.
+    """
+
+    def __init__(self, sock, key, nonce):
+        if not re.fullmatch(r'[0-9a-f]{16}', key) or not re.fullmatch(r'[0-9a-f]{32}', nonce):
+            raise BridgeError('Invalid authenticated session material')
+        self.sock = sock
+        self.key = key
+        self.nonce = nonce
+        self.seq = 0
+
+    def _mac(self, direction, seq, body):
+        message = '{}:{}:{}:{}'.format(direction, self.nonce, seq, body).encode('ascii')
+        return hmac.new(self.key.encode('ascii'), message, hashlib.sha256).hexdigest()
+
+    def send(self, command):
+        if not command or not command.isascii() or '\n' in command or '\r' in command:
+            raise BridgeError('Invalid admin command')
+        self.seq += 1
+        seq = self.seq
+        mac = self._mac('admin', seq, command)
+        send_line(self.sock, 'ADM {} {} {}'.format(seq, command, mac))
+        answer = recv_line(self.sock)
+        parts = answer.split(' ')
+        if len(parts) < 5 or parts[0] != 'ADMREPLY' or parts[1] != str(seq):
+            raise BridgeError('Invalid or unauthenticated admin reply')
+        body = ' '.join(parts[2:-1])
+        tag = parts[-1]
+        if not re.fullmatch(r'[0-9a-f]{64}', tag) or not hmac.compare_digest(
+                tag, self._mac('reply', seq, body)):
+            raise BridgeError('Invalid admin reply HMAC')
+        if body == 'OK':
+            return ''
+        if body.startswith('OK '):
+            return body[3:]
+        if body.startswith('ERR '):
+            raise BridgeError('E7 admin: ' + body[4:])
+        raise BridgeError('Unknown admin reply')
+
+
+def validate_push_name(path, bucket):
+    name = Path(path).name
+    if not ADMIN_NAME.fullmatch(name) or '..' in name or name.endswith('.'):
+        raise BridgeError('Use a simple ASCII filename (1-64 chars, no traversal)')
+    if bucket not in ('inbox', 'installs'):
+        raise BridgeError('Destination must be inbox or installs')
+    if bucket == 'installs' and not name.lower().endswith(('.sis', '.sisx')):
+        raise BridgeError('Only .sis or .sisx packages can enter installs')
+    return name
+
+
+def push_file(admin, source, bucket='inbox'):
+    """Atomically stage one file on E:, with no phone-side install/unlock.
+
+    All write commands have session-bound request AND response HMACs. The phone
+    rejects existing destinations, protected folders and invalid manifest data.
+    """
+    name = validate_push_name(source, bucket)
+    path = Path(source)
+    if path.is_symlink() or not path.is_file():
+        raise BridgeError('Push source must be an existing regular non-symlink file')
+    with path.open('rb') as stream:
+        details = os.fstat(stream.fileno())
+        if not stat.S_ISREG(details.st_mode) or not 0 <= details.st_size <= ADMIN_MAX_BYTES:
+            raise BridgeError('Push source must be a regular file <=8 MiB')
+        digest = hashlib.sha256()
+        while True:
+            block = stream.read(65536)
+            if not block:
+                break
+            digest.update(block)
+        expected = digest.hexdigest()
+        size = details.st_size
+        stream.seek(0)
+        begun = True  # Cancel even if BEGIN's response is lost after staging.
+        try:
+            ready = admin.send('BEGIN {} {} {} {}'.format(bucket, name, size, expected))
+            if ready != 'READY':
+                raise BridgeError('Phone refused staging manifest')
+            sent = 0
+            while sent < size:
+                block = stream.read(min(ADMIN_CHUNK, size - sent))
+                if not block:
+                    raise BridgeError('Local file changed during upload')
+                data = base64.b64encode(block).decode('ascii')
+                reply = admin.send('CHUNK {} {}'.format(sent, data))
+                if reply != 'CHUNK':
+                    raise BridgeError('Bad chunk acknowledgement')
+                sent += len(block)
+            reply = admin.send('FINISH')
+            if reply != 'STORED {} {}'.format(size, expected):
+                raise BridgeError('Final remote receipt mismatch')
+            begun = False
+            return 'E:/Installs/' + name if bucket == 'installs' else 'E:/KAI/INBOX/' + name, size, expected
+        except (OSError, BridgeError):
+            if begun:
+                try:
+                    admin.send('CANCEL')
+                except (OSError, BridgeError):
+                    pass
+            raise
 
 
 def collect_processes(sock, max_entries=2000):
@@ -446,8 +561,8 @@ def print_process_diff(changes):
         print('No differences in this pair of non-atomic snapshots.')
 
 
-def repl(sock):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, help, exit')
+def repl(sock, admin=None):
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -472,6 +587,7 @@ def repl(sock):
                 print('diff          Compare the two latest saved process snapshots (host only)')
                 print('record [N S]  Capture 2-12 samples, every 5-120 seconds (default 3 10)')
                 print('pull probe    Receive only E:/KAI/INDEX.HTM (max 64 KiB; unencrypted LAN)')
+                print('push FILE [inbox|installs]  Transfer <=8 MiB to E:/KAI/INBOX or E:/Installs (no overwrite)')
                 print('exit          Close connection and stop bridge')
                 continue
             if cmd == 'QUIT':
@@ -480,6 +596,19 @@ def repl(sock):
                 except (BridgeError, OSError):
                     pass
                 return
+            if cmd.startswith('PUSH '):
+                if admin is None:
+                    raise BridgeError('Push requires an authenticated administrative session')
+                try:
+                    args = shlex.split(cmd[5:])
+                except ValueError as exc:
+                    raise BridgeError('Invalid file quoting: {}'.format(exc))
+                if len(args) not in (1, 2):
+                    raise BridgeError('Usage: push LOCALFILE [inbox|installs]')
+                remote, count, digest = push_file(admin, args[0], args[1].lower() if len(args) == 2 else 'inbox')
+                print('Stored on Nokia:', remote)
+                print('Verified remote receipt: {} bytes; SHA-256 {}'.format(count, digest))
+                continue
             if cmd == 'PULL_PROBE':
                 path, count, digest = pull_probe(sock)
                 print('Saved read-only E7 fixture:', path)
@@ -545,12 +674,12 @@ def run_server(bind, port, key):
                 print('Incoming connection from {}:{}'.format(*peer))
                 connection.settimeout(10.0)
                 try:
-                    authenticate(connection, key)
+                    nonce = authenticate(connection, key)
                 except (BridgeError, OSError, UnicodeError) as exc:
                     print('Rejected:', exc)
                     continue
                 connection.settimeout(15.0)
-                repl(connection)
+                repl(connection, AdminSession(connection, key, nonce))
                 return
 
 

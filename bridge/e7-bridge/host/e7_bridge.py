@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.4.0: Linux host for a user-operated, read-only Symbian agent.
+"""E7 Bridge v0.4.1: Linux host for a user-operated, read-only Symbian agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted

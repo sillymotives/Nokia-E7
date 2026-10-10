@@ -1,11 +1,13 @@
-// E7 Bridge v0.4.0: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.4.1: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, read-only, outbound TCP, HMAC authenticated.
-// Never writes files, executes shell commands, or runs at boot.
+// Remote operations remain read-only. Only private local pairing settings are written.
+// Never executes shell commands or runs at boot.
 #include <QtGui/QApplication>
 #include <QtGui/QWidget>
 #include <QtGui/QLabel>
 #include <QtGui/QLineEdit>
 #include <QtGui/QPushButton>
+#include <QtGui/QCheckBox>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QFormLayout>
 #include <QtNetwork/QTcpSocket>
@@ -15,6 +17,7 @@
 #include "sha256_compat.h"
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <QtCore/QSettings>
 #include <QtCore/QRegExp>
 #include <QtCore/QStringList>
 #ifdef Q_OS_SYMBIAN
@@ -69,7 +72,7 @@ public:
           authenticated(false), awaitingReady(false), wantConnection(false) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.4.0\nRead-only control over local Wi-Fi", this);
+            "E7 Bridge v0.4.1\nRead-only control over local Wi-Fi", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -80,6 +83,9 @@ public:
         QFormLayout *form = new QFormLayout();
         form->addRow("Debian IPv4", server);
         form->addRow("Pairing key", key);
+        remember = new QCheckBox("Remember IP + key on this phone", this);
+        remember->setChecked(true);
+        QPushButton *forgetButton = new QPushButton("Forget saved pairing", this);
         QPushButton *connectButton = new QPushButton("Connect", this);
         QPushButton *disconnectButton = new QPushButton("Disconnect", this);
         state = new QLabel("Idle; nothing runs in the background.", this);
@@ -87,18 +93,41 @@ public:
         QVBoxLayout *layout = new QVBoxLayout(this);
         layout->addWidget(intro);
         layout->addLayout(form);
+        layout->addWidget(remember);
+        layout->addWidget(forgetButton);
         layout->addWidget(connectButton);
         layout->addWidget(disconnectButton);
         layout->addWidget(state);
         connect(connectButton, SIGNAL(clicked()), this, SLOT(startLink()));
         connect(disconnectButton, SIGNAL(clicked()), this, SLOT(stopLink()));
+        connect(forgetButton, SIGNAL(clicked()), this, SLOT(forgetPairing()));
+        connect(remember, SIGNAL(toggled(bool)), this, SLOT(onRememberToggled(bool)));
         connect(socket, SIGNAL(connected()), this, SLOT(onConnected()));
         connect(socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
         connect(socket, SIGNAL(readyRead()), this, SLOT(onData()));
         connect(socket, SIGNAL(error(QAbstractSocket::SocketError)),
                 this, SLOT(onSocketError(QAbstractSocket::SocketError)));
+        restoreSavedPairing(); // Prefill only; NEVER initiate networking at startup.
     }
 private slots:
+    void onRememberToggled(bool enabled) {
+        if (enabled) return; // Re-enable saving only after the next successful handshake.
+        if (clearSavedPairing())
+            state->setText("Remember disabled; saved pairing cleared.");
+        else
+            state->setText("Cannot clear saved pairing; check phone storage.");
+    }
+    void forgetPairing() {
+        stopLink();
+        remember->blockSignals(true);
+        remember->setChecked(false);
+        remember->blockSignals(false);
+        const bool erased = clearSavedPairing();
+        server->clear();
+        key->clear();
+        state->setText(erased ? "Saved pairing forgotten; no auto-connect."
+                              : "Could not erase saved pairing; inspect C: storage.");
+    }
     void startLink() {
         if (socket->state() != QAbstractSocket::UnconnectedState) {
             state->setText("Already connecting or connected.");
@@ -116,6 +145,9 @@ private slots:
         authenticated = false;
         awaitingReady = false;
         wantConnection = true;
+        // Freeze validated input until the handshake completes or fails.
+        server->setEnabled(false);
+        key->setEnabled(false);
         incoming.clear();
         state->setText("Opening Wi-Fi bearer...");
         QNetworkConfigurationManager manager;
@@ -148,6 +180,7 @@ private slots:
         authenticated = false;
         awaitingReady = false;
         incoming.clear();
+        server->setEnabled(true);
         key->setEnabled(true);
         if (session) {
             session->close();
@@ -162,15 +195,20 @@ private slots:
         authenticated = false;
         awaitingReady = false;
         incoming.clear();
+        server->setEnabled(true);
         key->setEnabled(true);
         state->setText("Disconnected. Reconnect manually when ready.");
     }
     void onSocketError(QAbstractSocket::SocketError) {
         wantConnection = false;
+        server->setEnabled(true);
+        key->setEnabled(true);
         state->setText("Network error: " + socket->errorString());
     }
     void onSessionError(QNetworkSession::SessionError) {
         wantConnection = false;
+        server->setEnabled(true);
+        key->setEnabled(true);
         state->setText("Wi-Fi session failed; connect Wi-Fi in Settings first.");
     }
     void onData() {
@@ -213,7 +251,17 @@ private slots:
             authenticated = true;
             awaitingReady = false;
             key->setEnabled(false);
-            state->setText("Authenticated. Debian terminal connected (read-only).");
+            if (remember->isChecked()) {
+                // Persist only AFTER validating the host's READY HMAC above.
+                // Symbian applicationDirPath() is our UID3-caged private folder.
+                // This file is not encrypted; use a trusted device and LAN.
+                const bool saved = savePairing();
+                state->setText(saved ?
+                    "Authenticated; pairing remembered (private local settings)." :
+                    "Authenticated; could not save pairing. Check C: storage.");
+            } else {
+                state->setText("Authenticated; pairing not saved (read-only commands).");
+            }
             return;
         }
         if (!authenticated) {
@@ -237,7 +285,7 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.4.0");
+                     "; E7 Bridge v0.4.1");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
@@ -389,8 +437,48 @@ private slots:
         sendB64(details);
     }
 private:
+    static QString pairingSettingsPath() {
+        // On Symbian, QApplication::applicationDirPath() resolves to
+        // the application's private, Secure-ID-caged directory on C:.
+        // Do NOT use QSettings UserScope: its default path is public on Symbian.
+        return QApplication::applicationDirPath() + "/e7bridge-connection.ini";
+    }
+    void restoreSavedPairing() {
+        QSettings saved(pairingSettingsPath(), QSettings::IniFormat);
+        saved.setFallbacksEnabled(false);
+        const QString address = saved.value("connection/host").toString().trimmed();
+        const QString secret = saved.value("connection/pairing_key").toString().trimmed().toLower();
+        const QHostAddress addr(address);
+        if (!addr.isNull() && addr.protocol() == QAbstractSocket::IPv4Protocol &&
+            QRegExp("[0-9a-f]{16}").exactMatch(secret)) {
+            server->setText(address);
+            key->setText(secret);
+            state->setText("Saved pairing loaded. Press Connect manually.");
+        }
+    }
+    bool savePairing() {
+        const QString address = server->text().trimmed();
+        const QString secret = key->text().trimmed().toLower();
+        const QHostAddress addr(address);
+        if (addr.isNull() || addr.protocol() != QAbstractSocket::IPv4Protocol ||
+            !QRegExp("[0-9a-f]{16}").exactMatch(secret)) return false;
+        QSettings saved(pairingSettingsPath(), QSettings::IniFormat);
+        saved.setFallbacksEnabled(false);
+        saved.setValue("connection/host", address);
+        saved.setValue("connection/pairing_key", secret);
+        saved.sync();
+        return saved.status() == QSettings::NoError;
+    }
+    bool clearSavedPairing() {
+        QSettings saved(pairingSettingsPath(), QSettings::IniFormat);
+        saved.setFallbacksEnabled(false);
+        saved.clear(); // Only touches this app's own private connection.ini.
+        saved.sync();
+        return saved.status() == QSettings::NoError;
+    }
     QLineEdit *server;
     QLineEdit *key;
+    QCheckBox *remember;
     QLabel *state;
     QTcpSocket *socket;
     QNetworkSession *session;

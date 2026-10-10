@@ -8,7 +8,7 @@ toolchain=/toolchain/current
 certificate="/signing/$E7_SIGNING_CERT"
 private_key="/signing/$E7_SIGNING_KEY"
 uid=0xE94B7001
-output=/out/E7Bridge-v0.4.0.sis
+output=/out/E7Bridge-v0.4.1.sis
 
 for item in "$toolchain/sdk/bin/qmake" "$toolchain/bin/makesis" \
     "$toolchain/bin/signsis" "$toolchain/bin/symbian-gcce-link" \
@@ -44,7 +44,7 @@ expected_uid=$(printf '%s' "${uid#0x}" | tr '[:upper:]' '[:lower:]')
 cat > e7bridge.pkg <<EOF_PKG
 ; E7 Bridge native Qt 4.7.4 development package
 &EN
-#{"E7 Bridge"},($uid),0,4,0
+#{"E7 Bridge"},($uid),0,4,1
 %{"E7 Bridge"}
 :"E7 Bridge"
 (0x2001E61C),4,7,4,{"Qt"}
@@ -55,13 +55,13 @@ cat > e7bridge.pkg <<EOF_PKG
 "$build/E7Bridge_reg.rsc"-"!:\\private\\10003a3f\\import\\apps\\E7Bridge_reg.rsc"
 EOF_PKG
 makesis e7bridge.pkg e7bridge-unsigned.sis
-signsis e7bridge-unsigned.sis "$staging/E7Bridge-v0.4.0.sis" \
+signsis e7bridge-unsigned.sis "$staging/E7Bridge-v0.4.1.sis" \
     "$certificate" "$private_key"
-test -s "$staging/E7Bridge-v0.4.0.sis"
-file "$staging/E7Bridge-v0.4.0.sis" | grep -Fq 'Symbian installation file'
-signsis -o "$staging/E7Bridge-v0.4.0.sis" > signing.txt
+test -s "$staging/E7Bridge-v0.4.1.sis"
+file "$staging/E7Bridge-v0.4.1.sis" | grep -Fq 'Symbian installation file'
+signsis -o "$staging/E7Bridge-v0.4.1.sis" > signing.txt
 grep -Fq 'Issued to:' signing.txt
 
-mv -- "$staging/E7Bridge-v0.4.0.sis" "$output"
+mv -- "$staging/E7Bridge-v0.4.1.sis" "$output"
 file E7Bridge.exe "$output"
 sha256sum "$output"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.8.1: Linux host for a user-operated Symbian diagnostic and admin agent.
+"""E7 Bridge v0.9.0: Linux host for a user-operated Symbian diagnostic and admin agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -36,6 +36,7 @@ ADMIN_CHUNK = 2048
 ADMIN_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z')
 RECEIVE_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'received'
 BATCH_JOURNAL_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'batches'
+INVENTORY_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'inventory'
 BATCH_ADMIN_MAX_FILE = 8192
 BATCH_ADMIN_MAX_STEPS = 40
 BATCH_ADMIN_TOTAL_BYTES = 32 * 1024 * 1024
@@ -290,6 +291,8 @@ def normalize_command(text):
         if len(items) != 2 or re.fullmatch(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}', items[1]) is None:
             raise BridgeError('Usage: verify UID MAJOR.MINOR.BUILD')
         return 'VERIFY {} {}'.format(normalize_uid(items[0]), items[1])
+    if verb in ('baseline', 'inventory') and arg:
+        return 'BASELINE ' + arg
     if verb == 'batch' and arg:
         if arg.startswith('--write '):
             return 'BATCH_WRITE ' + arg[8:]
@@ -334,7 +337,7 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, packages [offset|all], pkg UID, verify UID VERSION, batch FILE, batch --plan FILE, batch --write FILE, batch --resume JOURNAL FILE, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, baseline capture|diff|compare|report, batch, capture, diff, record, pull probe, push, deploy, help, exit')
 
 
 def parse_probe_info(reply):
@@ -997,8 +1000,77 @@ def describe_write_batch(plan):
     print('An interrupted write requires manual investigation, not blind retry.')
 
 
+
+
+def inventory_tools():
+    """Import only local, host-only analysis functions; no device write API."""
+    from importlib import util
+    source = Path(__file__).resolve().with_name('inventory.py')
+    spec = util.spec_from_file_location('e7_inventory_v1', source)
+    if spec is None or spec.loader is None:
+        raise BridgeError('Missing host/inventory.py')
+    module = util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_baseline_command(sock, args, directory=None):
+    """Capture or analyse private inventory snapshots (queries are read-only)."""
+    inv = inventory_tools()
+    directory = Path(directory) if directory is not None else INVENTORY_DIR
+    if not args:
+        raise BridgeError('Usage: baseline capture [LABEL] | diff | compare OLD NEW | report FILE')
+    action = args[0].lower()
+    try:
+        if action == 'capture' and len(args) in (1, 2):
+            if sock is None:
+                raise BridgeError('Capture needs a connected E7 bridge')
+            label = args[1] if len(args) == 2 else None
+            if label is not None and not inv.LABEL.fullmatch(label):
+                raise BridgeError('Capture label must be simple alphanumeric/underscore/dash (max 32)')
+            started = inv.utcnow()
+            info = request(sock, 'INFO')
+            packages = collect_packages(sock)
+            processes = collect_processes(sock)
+            metrics = parse_metrics(request(sock, 'METRICS'))
+            finished = inv.utcnow()
+            snapshot = inv.compose(info, packages, processes, metrics, started, finished, label)
+            raw, report = inv.save(snapshot, directory)
+            print('Read-only E7 baseline saved:', raw)
+            print('Review report saved:       ', report)
+            print('{} installed base SIS packages, {} running process entries'.format(
+                snapshot['package_count'], snapshot['process_count']))
+            print('Historical-service name leads: {} (investigate only; do not uninstall based on names).'.format(
+                len(inv.leads(snapshot))))
+            return raw
+        if action == 'report' and len(args) == 2:
+            snap = inv.read_snapshot(args[1])
+            print(inv.report(snap))
+            return None
+        if action == 'diff' and len(args) == 1:
+            first, second = inv.most_recent(directory)
+        elif action == 'compare' and len(args) == 3:
+            first, second = Path(args[1]), Path(args[2])
+        else:
+            raise BridgeError('Usage: baseline capture [LABEL] | diff | compare OLD NEW | report FILE')
+        before = inv.read_snapshot(first)
+        after = inv.read_snapshot(second)
+        result = inv.compare(before, after)
+        json_path, md_path = inv.save_diff(result, directory)
+        print('Comparing:', first)
+        print('      with:', second)
+        print('Diff JSON saved:', json_path)
+        print('Diff report:    ', md_path)
+        print('Packages +{} -{} modified {}; process entries +{} -{}'.format(
+            len(result['packages_added']), len(result['packages_removed']),
+            len(result['packages_modified']), len(result['processes_appeared']),
+            len(result['processes_disappeared'])))
+        return json_path
+    except inv.InventoryError as exc:
+        raise BridgeError('Inventory: ' + str(exc))
+
 def repl(sock, admin=None):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, batch, batch --plan, batch --write, batch --resume, capture, diff, record, pull probe, push, deploy, help, exit')
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, baseline, batch, capture, diff, record, pull probe, push, deploy, help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -1022,6 +1094,10 @@ def repl(sock, admin=None):
                 print('packages [offset|all] List native installed SIS package UIDs/versions')
                 print('pkg UID       Inspect a SIS package by 32-bit UID')
                 print('verify UID VERSION  Confirm registry has exact MAJOR.MINOR.BUILD')
+                print('baseline capture [LABEL]   Save private package/process/metric inventory and review report')
+                print('baseline diff              Compare two latest local inventory captures')
+                print('baseline compare OLD NEW   Compare explicit inventory files offline')
+                print('baseline report FILE       Display one saved inventory report offline')
                 print('batch FILE    Run up to 40 read-only terminal commands without multiline paste')
                 print('batch --plan FILE    Preflight up to 40 steps including writes, no device changes')
                 print('batch --write FILE   Execute read/write manifest, journal every step, no extra approvals')
@@ -1040,6 +1116,13 @@ def repl(sock, admin=None):
                 except (BridgeError, OSError):
                     pass
                 return
+            if cmd.startswith('BASELINE '):
+                try:
+                    argv = shlex.split(cmd[9:])
+                except ValueError as exc:
+                    raise BridgeError('Invalid baseline arguments: {}'.format(exc))
+                run_baseline_command(sock, argv)
+                continue
             if cmd.startswith(('BATCH_PLAN ', 'BATCH_WRITE ', 'BATCH_RESUME ')):
                 mode, value = cmd.split(' ', 1)
                 try:
@@ -1201,6 +1284,9 @@ def main(argv=None):
     serving = sub.add_parser('serve', help='Wait for a connection from E7')
     serving.add_argument('--bind', required=True, help='Your Debian LAN IPv4 address, e.g. 192.168.1.20')
     serving.add_argument('--port', type=int, default=PORT)
+    offline = sub.add_parser('baseline', help='Review or compare saved inventory files offline')
+    offline.add_argument('operation', choices=('report', 'compare'))
+    offline.add_argument('paths', nargs='+')
     opts = parser.parse_args(argv)
     try:
         if opts.mode == 'init':
@@ -1209,6 +1295,8 @@ def main(argv=None):
             print('Stored with mode 0600 at', SECRET_PATH)
         elif opts.mode == 'show-key':
             print(load_key())
+        elif opts.mode == 'baseline':
+            run_baseline_command(None, [opts.operation] + opts.paths)
         elif opts.mode == 'serve':
             if not 1024 <= opts.port <= 65535:
                 parser.error('Port must be 1024-65535')

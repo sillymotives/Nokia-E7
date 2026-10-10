@@ -1,4 +1,4 @@
-// E7 Bridge v0.3.0: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.4.0: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, read-only, outbound TCP, HMAC authenticated.
 // Never writes files, executes shell commands, or runs at boot.
 #include <QtGui/QApplication>
@@ -19,6 +19,8 @@
 #include <QtCore/QStringList>
 #ifdef Q_OS_SYMBIAN
 #include <e32base.h> // TFindProcess and TFullName enumerate process names read-only
+#include <e32property.h> // RProperty::Get; read only
+#include <hal.h> // HAL::Get; read only
 #endif
 
 static const int kPort = 46270;
@@ -67,7 +69,7 @@ public:
           authenticated(false), awaitingReady(false), wantConnection(false) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.3.0\nRead-only control over local Wi-Fi", this);
+            "E7 Bridge v0.4.0\nRead-only control over local Wi-Fi", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -235,9 +237,10 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.3.0");
+                     "; E7 Bridge v0.4.0");
             return;
         }
+        if (line == "METRICS") { sendMetrics(); return; }
         if (line.startsWith("PROCS ")) {
             const QByteArray arg = line.mid(6);
             if (!QRegExp("[0-9]{1,4}").exactMatch(QString::fromLatin1(arg))) {
@@ -300,6 +303,38 @@ private slots:
         sendB64(result.join("\n"));
 #else
         Q_UNUSED(offset);
+        sendLine("ERR SYMBIAN_ONLY");
+#endif
+    }
+    // Snapshotted in the phone process, reported only to the authenticated
+    // Debian endpoint. HAL RAM values are bytes. The public power-state
+    // properties (0x10205041, keys 1..3) expose vendor-specific RAW integers,
+    // not a battery percentage. Missing/denied reads are "unavailable".
+    // This does not subscribe to or modify system properties.
+    static QString metricValue(TInt error, TInt value) {
+        return error == KErrNone ? QString::number(value) : QString("unavailable");
+    }
+    void sendMetrics() {
+#ifdef Q_OS_SYMBIAN
+        QStringList values;
+        TInt ramTotal = 0;
+        TInt ramFree = 0;
+        const TInt ramTotalErr = HAL::Get(HALData::EMemoryRAM, ramTotal);
+        const TInt ramFreeErr = HAL::Get(HALData::EMemoryRAMFree, ramFree);
+        values << "ram_total_bytes=" + metricValue(ramTotalErr, ramTotal);
+        values << "ram_free_bytes=" + metricValue(ramFreeErr, ramFree);
+        const TUid category = TUid::Uid(0x10205041); // Symbian HWRM power P&S
+        TInt level = 0;
+        TInt battery = 0;
+        TInt charging = 0;
+        const TInt levelErr = RProperty::Get(category, 1, level);
+        const TInt batteryErr = RProperty::Get(category, 2, battery);
+        const TInt chargingErr = RProperty::Get(category, 3, charging);
+        values << "battery_level_raw=" + metricValue(levelErr, level);
+        values << "battery_status_raw=" + metricValue(batteryErr, battery);
+        values << "charging_status_raw=" + metricValue(chargingErr, charging);
+        sendB64(values.join("\n"));
+#else
         sendLine("ERR SYMBIAN_ONLY");
 #endif
     }

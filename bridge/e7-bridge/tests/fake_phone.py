@@ -35,6 +35,10 @@ def main():
                 e7.send_line(conn, 'OK PONG (SIMULATOR)')
             elif command == 'INFO':
                 e7.send_line(conn, 'OK SIMULATED Nokia E7 / Symbian Belle')
+            elif command == 'METRICS':
+                values = ('ram_total_bytes=268435456\nram_free_bytes=125829120\n'
+                          'battery_level_raw=5\nbattery_status_raw=1\ncharging_status_raw=0')
+                e7.send_line(conn, 'B64 ' + base64.b64encode(values.encode('ascii')).decode('ascii'))
             elif command.startswith('PROCS '):
                 import base64
                 offset = int(command.split()[1])

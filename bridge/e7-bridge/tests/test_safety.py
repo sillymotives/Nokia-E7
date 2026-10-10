@@ -58,11 +58,11 @@ class PackageSafety(unittest.TestCase):
         self.assertIn('uid=0xE94B7001', builder)
         self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData', pro)
         self.assertIn('E7Bridge_reg.rsc', builder)
-        self.assertIn('E7Bridge-v0.3.0.sis', builder)
+        self.assertIn('E7Bridge-v0.4.0.sis', builder)
 
     def test_agent_has_read_only_commands(self):
         cpp = (ROOT / 'phone' / 'main.cpp').read_text()
-        for verb in ('PING', 'INFO', 'DRIVES', 'PROCS ', 'LIST ', 'STAT ', 'QUIT'):
+        for verb in ('PING', 'INFO', 'DRIVES', 'PROCS ', 'METRICS', 'LIST ', 'STAT ', 'QUIT'):
             self.assertIn('"' + verb + '"', cpp)
         self.assertNotIn('QProcess', cpp)
         self.assertNotIn('QFile::WriteOnly', cpp)
@@ -74,6 +74,12 @@ class PackageSafety(unittest.TestCase):
         self.assertIn('wantConnection', cpp)
         self.assertIn('TFindProcess', cpp)
         self.assertIn('listProcesses(int offset)', cpp)
+        self.assertIn('RProperty::Get', cpp)
+        self.assertIn('HAL::Get', cpp)
+        self.assertIn('sendMetrics()', cpp)
+        self.assertIn('LIBS += -lhal', (ROOT / 'phone' / 'e7bridge.pro').read_text())
+        self.assertNotIn('RProperty::Set', cpp)
+        self.assertNotIn('HAL::Set', cpp)
 
 
 if __name__ == '__main__':

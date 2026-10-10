@@ -1,4 +1,4 @@
-// E7 Bridge v0.4.1: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.5.0: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, read-only, outbound TCP, HMAC authenticated.
 // Remote operations remain read-only. Only private local pairing settings are written.
 // Never executes shell commands or runs at boot.
@@ -17,6 +17,7 @@
 #include "sha256_compat.h"
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <QtCore/QFile>
 #include <QtCore/QSettings>
 #include <QtCore/QRegExp>
 #include <QtCore/QStringList>
@@ -28,6 +29,11 @@
 
 static const int kPort = 46270;
 static const int kMaxLine = 4096;
+// The v0.5 read-only transfer pilot is deliberately limited to ONE known,
+// previously deployed synthetic fixture. No user-selected path or remote write.
+static const char kProbePath[] = "E:/KAI/INDEX.HTM";
+static const qint64 kProbeLimit = 65536;
+static const qint64 kProbeChunk = 1024;
 
 // HMAC-SHA256 must match the Debian Python hmac module exactly.
 // Qt 4.7.4 lacks a SHA-256 hash enum, so use the small portable
@@ -72,7 +78,7 @@ public:
           authenticated(false), awaitingReady(false), wantConnection(false) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.4.1\nRead-only control over local Wi-Fi", this);
+            "E7 Bridge v0.5.0\nRead-only control over local Wi-Fi", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -285,10 +291,25 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.4.1");
+                     "; E7 Bridge v0.5.0");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
+        if (line == "FILEINFO") { sendProbeInfo(); return; }
+        if (line.startsWith("FILECHUNK ")) {
+            const QByteArray arg = line.mid(10);
+            if (!QRegExp("[0-9]{1,5}").exactMatch(QString::fromLatin1(arg))) {
+                sendLine("ERR BAD_OFFSET"); return;
+            }
+            bool ok = false;
+            const qint64 offset = arg.toLongLong(&ok);
+            if (!ok || offset < 0 || offset >= kProbeLimit ||
+                (offset % kProbeChunk) != 0) {
+                sendLine("ERR BAD_OFFSET"); return;
+            }
+            sendProbeChunk(offset);
+            return;
+        }
         if (line.startsWith("PROCS ")) {
             const QByteArray arg = line.mid(6);
             if (!QRegExp("[0-9]{1,4}").exactMatch(QString::fromLatin1(arg))) {
@@ -385,6 +406,69 @@ private slots:
 #else
         sendLine("ERR SYMBIAN_ONLY");
 #endif
+    }
+    bool openProbe(QFile *file, qint64 *length) {
+        const QString fixedPath = QString::fromLatin1(kProbePath);
+        const QFileInfo info(fixedPath);
+        if (!info.exists() || !info.isFile() || info.isSymLink()) {
+            sendLine("ERR PROBE_NOT_FOUND"); return false;
+        }
+        // Resolve aliases for defence-in-depth. The source path is hard-coded.
+        const QString canonical = QDir::cleanPath(info.canonicalFilePath());
+        if (canonical.isEmpty() ||
+            canonical.compare(fixedPath, Qt::CaseInsensitive) != 0) {
+            sendLine("ERR PROBE_PATH_REJECTED"); return false;
+        }
+        if (info.size() < 0 || info.size() > kProbeLimit) {
+            sendLine("ERR PROBE_TOO_LARGE"); return false;
+        }
+        file->setFileName(fixedPath);
+        if (!file->open(QIODevice::ReadOnly)) {
+            sendLine("ERR PROBE_UNREADABLE"); return false;
+        }
+        if (file->size() != info.size()) {
+            sendLine("ERR PROBE_CHANGED"); return false;
+        }
+        *length = info.size();
+        return true;
+    }
+    void sendProbeInfo() {
+        QFile probe;
+        qint64 length = 0;
+        if (!openProbe(&probe, &length)) return;
+        E7Sha256State hash;
+        e7_sha256_init(&hash);
+        qint64 readCount = 0;
+        while (readCount < length) {
+            const qint64 wanted = qMin(static_cast<qint64>(2048), length - readCount);
+            const QByteArray block = probe.read(wanted);
+            if (block.isEmpty()) { sendLine("ERR PROBE_READ_FAILED"); return; }
+            e7_sha256_update(&hash,
+                reinterpret_cast<const unsigned char *>(block.constData()),
+                static_cast<unsigned int>(block.size()));
+            readCount += block.size();
+        }
+        if (probe.size() != length) { sendLine("ERR PROBE_CHANGED"); return; }
+        unsigned char digest[32];
+        e7_sha256_final(&hash, digest);
+        const QByteArray hex = QByteArray(reinterpret_cast<const char *>(digest), 32).toHex();
+        sendB64("size=" + QString::number(length) + "\nsha256=" +
+                QString::fromLatin1(hex.constData()));
+    }
+    void sendProbeChunk(qint64 offset) {
+        QFile probe;
+        qint64 length = 0;
+        if (!openProbe(&probe, &length)) return;
+        if (offset >= length || !probe.seek(offset)) {
+            sendLine("ERR PROBE_OFFSET"); return;
+        }
+        const qint64 wanted = qMin(kProbeChunk, length - offset);
+        const QByteArray block = probe.read(wanted);
+        if (block.size() != wanted || probe.size() != length) {
+            sendLine("ERR PROBE_CHANGED"); return;
+        }
+        // QByteArray::toBase64 is binary-safe; never turn the chunk into QString.
+        sendLine("B64 " + block.toBase64());
     }
     void sendB64(const QString &text) {
         const QByteArray encoded = text.toUtf8().toBase64();

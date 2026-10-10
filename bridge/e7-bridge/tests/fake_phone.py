@@ -7,6 +7,7 @@ from pathlib import Path
 import base64
 import importlib.util
 import socket
+import hashlib
 
 PATH = Path(__file__).resolve().parents[1] / 'host' / 'e7_bridge.py'
 spec = importlib.util.spec_from_file_location('e7_bridge', PATH)
@@ -29,9 +30,25 @@ def main():
         expected = 'E7B1 READY ' + e7.expected_auth(key, 'host:' + nonce)
         assert e7.recv_line(conn) == expected, 'Host did not authenticate'
         print('Mock E7 authenticated; exercise the Linux terminal now.')
+        fixture = b'<html><body>E7 bridge fake fixture\x00\xff</body></html>\n'
         while True:
             command = e7.recv_line(conn)
-            if command == 'PING':
+            if command == 'FILEINFO':
+                text = 'size={}\nsha256={}'.format(
+                    len(fixture), hashlib.sha256(fixture).hexdigest())
+                e7.send_line(conn, 'B64 ' + base64.b64encode(text.encode('ascii')).decode('ascii'))
+            elif command.startswith('FILECHUNK '):
+                try:
+                    offset = int(command.split()[1])
+                except (IndexError, ValueError):
+                    e7.send_line(conn, 'ERR BAD_OFFSET')
+                    continue
+                if offset < 0 or offset >= len(fixture) or offset % e7.PROBE_CHUNK:
+                    e7.send_line(conn, 'ERR BAD_OFFSET')
+                    continue
+                chunk = fixture[offset:offset+e7.PROBE_CHUNK]
+                e7.send_line(conn, 'B64 ' + base64.b64encode(chunk).decode('ascii'))
+            elif command == 'PING':
                 e7.send_line(conn, 'OK PONG (SIMULATOR)')
             elif command == 'INFO':
                 e7.send_line(conn, 'OK SIMULATED Nokia E7 / Symbian Belle')

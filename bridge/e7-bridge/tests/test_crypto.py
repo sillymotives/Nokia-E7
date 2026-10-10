@@ -68,7 +68,7 @@ class PortableCryptoTests(unittest.TestCase):
 
     def test_python_interoperability_over_block_boundaries(self):
         rng = random.Random(7108474)
-        sizes = (0, 1, 7, 16, 55, 56, 63, 64, 65, 80, 127, 128, 129, 256, 1023)
+        sizes = (0, 1, 7, 16, 55, 56, 63, 64, 65, 80, 127, 128, 129, 256, 1023, 1024, 2048, 65536)
         for size in sizes:
             message = bytes(rng.randrange(256) for _ in range(size))
             self.assertEqual(self.hash(message), hashlib.sha256(message).digest())

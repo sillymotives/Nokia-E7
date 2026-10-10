@@ -1,23 +1,43 @@
-# E7 Bridge v0.4.1: Remember last successful pairing
+# E7 Bridge v0.5.0: bounded cable-free file-transfer proof
 
-A manually launched **read-only** native Qt 4.7.4 agent for the Nokia E7-00
-running Belle, with a Python 3 Debian terminal controller. Built on the already
-proven E7 Bridge v0.3.0. **Physical E7 acceptance passed on 2026-10-10:** the application was
-compiled and installed on the Nokia E7, authenticated over trusted Wi-Fi,
-and confirmed working for `ping`, `info`, `metrics`, `ps save`, `capture`,
-`diff`, and `record 3 10`. The native music player, Wi-Fi and normal standby
-were reported working after exit. Tests remain operator-observed, not CI
-hardware automation or evidence of long-term resource consumption.
+A manually launched, Qt 4.7.4 native Symbian Belle agent on a real Nokia E7,
+with a Python 3 Debian controller. **v0.5.0 remains a source candidate:** its
+Linux tests pass, but it has not yet compiled or run on the physical E7.
+The previous v0.4.1 release is physically accepted, including last-successful
+connection persistence, wrong-key handling, Forget, and native-app regression.
 
-## v0.4.1 quality-of-life improvement
+## First wireless transfer: `pull probe`
 
-- The Nokia now pre-fills the **last successfully authenticated** Debian IPv4 address and pairing key on its next launch, so rebooting does not require retyping them.
-- The default **Remember IP + key on this phone** checkbox enables persistence; disable it to clear saved settings immediately, or press **Forget saved pairing** to clear both the saved values and current text fields.
-- The key is stored as **unencrypted local configuration** in the app's own Symbian private UID3 directory on phone memory (C:); it is not written to publicly readable `C:/data/.config` and is never committed to Git. Device-level compromise or backups can still expose it.
-- Persistence occurs **only after successful mutual HMAC authentication**. Failed connection attempts never replace the last valid values. **No auto-connect**, new system capability, remote write, firmware modification, or protocol change. The host v0.4 controller remains compatible.
-- `E7Bridge-v0.4.1.sis` was built and installed on the physical Nokia E7 with the existing development UID and signing setup. Phone-side save/relaunch/incorrect-key/forget checks and music, Wi-Fi and standby regression checks were reported passing on 2026-10-10.
+The Nokia can now expose exactly **one already deployed synthetic file**,
+`E:/KAI/INDEX.HTM`, via two new authenticated-session read-only wire commands:
+`FILEINFO` and `FILECHUNK OFFSET`. It will not read arbitrary paths. The fixed
+source must be an ordinary non-symlinked file, canonically matching the expected
+path, and be no larger than **64 KiB**. The controller downloads it into a
+private host folder and only publishes the `.htm` after checking the full
+size and SHA-256. Interrupted or inconsistent transfers leave no result.
 
-See [PAIRING-PERSISTENCE.md](PAIRING-PERSISTENCE.md) for the test/rollback gate.
+On Sanctuary, after building/installing the matching v0.5 SIS and connecting:
+
+```text
+ping
+info
+pull probe
+exit
+```
+
+The Wi-Fi protocol **is not encrypted**. The SHA-256 supplied by the phone is
+sent over the same unencrypted connection, so this verifies transfer
+consistency, not protection against an active network attacker. Only the
+known non-private test fixture is allowed. See
+[`TRANSFER-PROBE.md`](TRANSFER-PROBE.md) for exact limitations and acceptance.
+
+## Existing, physically accepted capabilities
+
+v0.4.1 restored the last successfully authenticated IPv4 host and masked
+pairing key on relaunch, without auto-connect. Remember and Forget controls
+work on the handset. It also preserved the v0.4 read-only RAM/power metrics,
+process capture/diff and bounded foreground diagnostic recording. Native
+music, Wi-Fi and standby remained functional after physical acceptance.
 
 ## What is new
 
@@ -43,7 +63,7 @@ preserved as `unavailable`, not silently replaced with plausible-looking data.
 ## Safety and trust model
 
 - Same application UID `0xE94B7001`, same development signing identity, version
-  raised to `0.4.1`. Original Nokia firmware is *not modified*.
+  raised to `0.5.0`. Original Nokia firmware is *not modified*.
 - Exactly the existing `NetworkServices ReadUserData` capabilities: no additional
   privileged rights, process control, property changes, autostart or remote shell.
 - Native `HAL::Get` and `RProperty::Get` only; no write-mode operations.
@@ -63,10 +83,9 @@ python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-All **42** host-side Python tests passed in the authoring container. The test
-suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
-local report permissions, process differences, recording limits, interruption,
-and read-only source assertions. It does not replace Symbian compilation or
+All **54** host-side Python tests passed in the authoring container for v0.5.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
+local report permissions, process differences, recording limits, interruptions,
+binary transfer limits/checksums/failure cleanup, and read-only source assertions. It does not replace Symbian compilation or
 on-device measurements.
 
 To run the simulator, use an **existing** pairing key in
@@ -88,8 +107,8 @@ build does **not** modify the PocketJS checkout.
 cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.4.1.sis
-sha256sum dist/E7Bridge-v0.4.1.sis
+file dist/E7Bridge-v0.5.0.sis
+sha256sum dist/E7Bridge-v0.5.0.sis
 ```
 
 If the native compile or SIS packaging fails, **stop** and inspect the error.
@@ -98,7 +117,7 @@ Do not alter ROMPatcher or force an installation to bypass the failure.
 If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
 Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
 existing PocketJS development signing volume so this has the same signer as
-v0.4.0. Close v0.4.0 first, and check that the new UI reports `v0.4.1`.
+v0.4.1. Close v0.4.1 first, and check that the new UI reports `v0.5.0`.
 
 On Debian, substitute Sanctuary's **current** local IPv4 address:
 
@@ -107,18 +126,16 @@ python3 host/e7_bridge.py serve --bind YOUR_CURRENT_DEBIAN_IP
 ```
 
 Manually start E7 Bridge on the E7 and connect with the same pairing key.
-Use `help` for a complete list. Recommended first physical acceptance pass:
+Use `help` for a complete list. Recommended first v0.5 physical acceptance:
 
 ```text
 ping
 info
-metrics
-ps save
-capture
-record 3 10
-diff
+pull probe
 exit
 ```
+
+Previous v0.4.1 read-only diagnostics (`metrics`, `ps save`, `capture`, `diff`, `record`) remain available.
 
 `record` is a foreground operation; leave the phone's app visible and Wi-Fi
 connected. If interrupted or disconnected, completed JSONL samples remain on
@@ -127,10 +144,6 @@ Debian. Do not misread `record 3 10` as continuous unattended monitoring.
 Afterwards, manually exit E7 Bridge, check music playback and Wi-Fi, and
 verify the Nokia returns to normal standby. Collect a cold-boot `ps save` only
 if convenient; do **not** modify startup processes based on it yet.
-
-## Early post-boot baseline and modernisation direction
-
-No new Symbian application is required for the next test. Follow [`BOOT-STAGES.md`](BOOT-STAGES.md) to capture early post-boot and settled-state data with v0.4, and compare selected local snapshots using `python3 tools/stage_compare.py`. This is **not** a pre-UI kernel boot trace, and comparing processes does not authorise disabling services. The full [native-first modernisation roadmap](../../docs/MODERNISATION-ROADMAP.md) prioritises verifiable file sync, safe modern network gateways and native workflows.
 
 ## Developer layout
 
@@ -152,3 +165,5 @@ No new Symbian application is required for the next test. Follow [`BOOT-STAGES.m
   https://cortex.p.gen.nz/nokia/symbian/S60%203rd%20Edition%20C%2B%2B%20Developer%27s%20Library%20v1.1/GUID-35228542-8C95-4849-A73F-2B4F082F0C44/html/SDL_93/doc_source/reference/reference-cpp/E32_EKA2/RPropertyClass.html
 - Historical Symbian Qt build workflow:
   https://github.com/pocket-nexus/pocketjs/blob/main/docs/SYMBIAN_E7.md
+
+- `TRANSFER-PROBE.md` — fixed-file wireless transfer protocol, test and rollback gate.

@@ -1,6 +1,6 @@
 # E7 Bridge v0.6: begin owner-controlled remote administration
 
-Status: **physical Nokia E7 positive-path smoke test passed** on 2026-10-10; broader negative-path and regression acceptance pending. Work started 2026-10-10.
+Status: **physical Nokia E7 positive-path smoke test passed** on 2026-10-10; full on-phone positive and no-overwrite acceptance reported passing. Work started 2026-10-10.
 
 ## Product goal
 
@@ -69,3 +69,9 @@ protected system changes until the independent recovery gate passes.
 ## Physical handset progress (2026-10-10)
 
 Operator compiled and installed the signed v0.6.0 application on their Nokia E7 and reported that the matching Sanctuary controller completed `ping`, `info`, `push`, `ls E:/KAI/INBOX`, and `stat` successfully. This verifies a user-initiated bridge session can stage and inspect an ordinary test file on physical Symbian Belle hardware. It does **not** by itself verify no-overwrite refusal on-device, mid-transfer rollback after a disconnect, or actual SIS launching. Those are subsequent regression gates. Linux suite: **65 passing tests**. No protected-system or firmware writes were attempted.
+
+## Final v0.6 physical check (2026-10-10)
+
+After the first successful handset upload, the operator ran the follow-up duplicate-upload and inspection commands, and confirmed they worked. In the intended flow, a repeated `push` is rejected without overwriting the original staged file. They also report the post-test phone regression checks passing. This user-reported handset acceptance complements the 65/65 Python tests; it does not establish remote application installation, privileged-system writing, or failure-path coverage under every possible disconnect.
+
+**Decision:** merge the tested 0.6 read/write staging feature into `main`. Keep remote SIS launch and any privileged capabilities for independent versioned development and acceptance.

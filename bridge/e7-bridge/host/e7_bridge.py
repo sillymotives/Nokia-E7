@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.7.0: Linux host for a user-operated Symbian diagnostic and admin agent.
+"""E7 Bridge v0.8.0: Linux host for a user-operated Symbian diagnostic and admin agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -122,7 +122,137 @@ def request(sock, command):
     raise BridgeError('Unexpected response from E7: {}'.format(reply[:70]))
 
 
+def normalize_uid(raw):
+    """Canonical SIS package UID (not executable/SID), exactly 32 bits."""
+    match = re.fullmatch(r'(?:0[xX])?([0-9a-fA-F]{8})', raw.strip())
+    if not match:
+        raise BridgeError('Package UID must be eight hexadecimal digits, optionally 0x-prefixed')
+    return match.group(1).upper()
+
+
+def parse_package_detail(response, expected_uid):
+    """Strictly parse one native SIS registry entry; no menu-icon heuristics."""
+    uid = normalize_uid(expected_uid)
+    lines = response.split('\n')
+    if len(lines) < 2 or lines[0] != 'uid=0x' + uid:
+        raise BridgeError('Invalid package registry UID in reply')
+    if lines[1] == 'installed=no' and len(lines) == 2:
+        return {'uid': '0x' + uid, 'installed': False}
+    if len(lines) != 4 or lines[1] != 'installed=yes':
+        raise BridgeError('Invalid package registry status')
+    version = lines[2]
+    name = lines[3]
+    if not version.startswith('version=') or re.fullmatch(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}', version[8:]) is None:
+        raise BridgeError('Invalid package registry version')
+    if not name.startswith('name=') or not (1 <= len(name[5:]) <= 100):
+        raise BridgeError('Invalid package registry name')
+    if any(ord(c) < 32 or ord(c) > 126 for c in name[5:]):
+        raise BridgeError('Unexpected package registry name characters')
+    return {'uid': '0x' + uid, 'installed': True, 'version': version[8:], 'name': name[5:]}
+
+
+def package_detail(sock, uid):
+    uid = normalize_uid(uid)
+    return parse_package_detail(request(sock, 'PKG ' + uid), uid)
+
+
+def verify_package(sock, uid, version):
+    if re.fullmatch(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}', version) is None:
+        raise BridgeError('Expected version must be MAJOR.MINOR.BUILD')
+    detail = package_detail(sock, uid)
+    return detail, detail['installed'] and detail['version'] == version
+
+
+def parse_package_page(reply, offset):
+    """Decode bounded native list pages, reject malformed or stalled paging."""
+    lines = reply.split('\n')
+    if len(lines) < 2 or not re.fullmatch(r'total=[0-9]{1,4}', lines[0]):
+        raise BridgeError('Invalid package-page header')
+    total = int(lines[0][6:])
+    if total > 2000:
+        raise BridgeError('Package registry exceeds 2000-entry limit')
+    marker = lines[-1]
+    if marker == '[END]':
+        following = None
+    elif re.fullmatch(r'\[NEXT\] [0-9]{1,4}', marker):
+        following = int(marker[7:])
+    else:
+        raise BridgeError('Invalid package-page continuation')
+    rows = []
+    for row in lines[1:-1]:
+        bits = row.split('|', 2)
+        if len(bits) != 3 or not re.fullmatch(r'0x[0-9A-F]{8}', bits[0]):
+            raise BridgeError('Invalid package-list UID')
+        if re.fullmatch(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}', bits[1]) is None:
+            raise BridgeError('Invalid package-list version')
+        if not (1 <= len(bits[2]) <= 100) or any(ord(x) < 32 or ord(x) > 126 for x in bits[2]):
+            raise BridgeError('Invalid package-list name')
+        rows.append({'uid': bits[0], 'version': bits[1], 'name': bits[2]})
+    if len(rows) > 12 or (offset < total and len(rows) == 0):
+        raise BridgeError('Invalid package page length')
+    if following is not None and (following <= offset or following != offset + len(rows) or following >= total):
+        raise BridgeError('Invalid package continuation offset')
+    if following is None and offset + len(rows) < total:
+        raise BridgeError('Package page ended before all packages')
+    if following is not None and len(rows) != 12:
+        raise BridgeError('Non-final package page is incomplete')
+    return total, rows, following
+
+
+def collect_packages(sock, limit=2000):
+    """Read read-only inventory, max 2000 entries / 167 fixed pages."""
+    offset, found, total = 0, [], None
+    while True:
+        next_total, page, following = parse_package_page(request(sock, 'PKGS {}'.format(offset)), offset)
+        if total is not None and next_total != total:
+            raise BridgeError('Package registry changed during listing; retry')
+        total = next_total
+        found.extend(page)
+        if len(found) > limit:
+            raise BridgeError('Package listing exceeds configured limit')
+        # Race/malformed response detection: native side sorts UID pages.
+        uids = [row['uid'] for row in found]
+        if any(uids[i] >= uids[i+1] for i in range(len(uids)-1)):
+            raise BridgeError('Package registry changed or repeated an entry during listing')
+        if following is None:
+            if len(found) != total:
+                raise BridgeError('Incomplete package listing')
+            return found
+        offset = following
+
+
+BATCH_SAFE = frozenset(('PING', 'INFO', 'DRIVES', 'METRICS'))
+
+
+def read_batch_file(source):
+    """Explicit bounded command file: read-only to avoid paste-triggered writes."""
+    path = Path(source)
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 8192:
+        raise BridgeError('Batch must be a regular non-symlink UTF-8 text file <=8 KiB')
+    try:
+        content = path.read_text(encoding='utf-8')
+    except UnicodeError:
+        raise BridgeError('Batch file must be UTF-8')
+    commands = []
+    for line in content.splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        command = normalize_command(line)
+        if not (command in BATCH_SAFE or command.startswith(('LIST ', 'STAT ', 'PKGS ', 'PKG ', 'VERIFY '))):
+            raise BridgeError('Batch permits only read-only device inspections (no push/deploy/exit)')
+        commands.append((line.strip(), command))
+        if len(commands) > 40:
+            raise BridgeError('Batch permits a maximum of 40 commands')
+    if not commands:
+        raise BridgeError('Batch file has no commands')
+    return commands
+
+
 def normalize_command(text):
+    # A pasted multi-command blob must not become an accidental device path.
+    # Use the explicit read-only `batch FILE` mode for multiple commands.
+    if any(c in text for c in ('\r', '\n', '\x00', '\x1b')):
+        raise BridgeError('Paste one command at a time, or use batch FILE')
     text = text.strip()
     if not text:
         return None
@@ -141,6 +271,23 @@ def normalize_command(text):
         return 'DRIVES'
     if verb == 'metrics' and not arg:
         return 'METRICS'
+    if verb in ('packages', 'pkgs'):
+        if not arg:
+            return 'PKGS 0'
+        if arg.lower() == 'all':
+            return 'PKGS_ALL'
+        if not arg.isascii() or not arg.isdecimal() or int(arg) > 2000:
+            raise BridgeError('packages offset must be between 0 and 2000')
+        return 'PKGS {}'.format(int(arg))
+    if verb == 'pkg':
+        return 'PKG ' + normalize_uid(arg)
+    if verb == 'verify':
+        items = arg.split()
+        if len(items) != 2 or re.fullmatch(r'[0-9]{1,5}(?:\.[0-9]{1,5}){2}', items[1]) is None:
+            raise BridgeError('Usage: verify UID MAJOR.MINOR.BUILD')
+        return 'VERIFY {} {}'.format(normalize_uid(items[0]), items[1])
+    if verb == 'batch' and arg:
+        return 'BATCH ' + arg
     if verb == 'pull' and arg.lower() == 'probe':
         return 'PULL_PROBE'
     if verb in ('push', 'deploy') and arg:
@@ -175,7 +322,7 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, packages [offset|all], pkg UID, verify UID VERSION, batch FILE, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
 
 
 def parse_probe_info(reply):
@@ -586,7 +733,7 @@ def print_process_diff(changes):
 
 
 def repl(sock, admin=None):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, batch, capture, diff, record, pull probe, push, deploy, help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -607,6 +754,10 @@ def repl(sock, admin=None):
                 print('ps all        Fetch the full bounded process-name inventory')
                 print('ps save       Save process-name inventory to a local JSON file')
                 print('metrics       RAM in bytes and raw power-state readings (if available)')
+                print('packages [offset|all] List native installed SIS package UIDs/versions')
+                print('pkg UID       Inspect a SIS package by 32-bit UID')
+                print('verify UID VERSION  Confirm registry has exact MAJOR.MINOR.BUILD')
+                print('batch FILE    Run up to 40 read-only terminal commands without multiline paste')
                 print('capture       Save telemetry and processes as local JSON (non-atomic)')
                 print('diff          Compare the two latest saved process snapshots (host only)')
                 print('record [N S]  Capture 2-12 samples, every 5-120 seconds (default 3 10)')
@@ -621,6 +772,58 @@ def repl(sock, admin=None):
                 except (BridgeError, OSError):
                     pass
                 return
+            if cmd.startswith('BATCH '):
+                try:
+                    parts = shlex.split(cmd[6:])
+                except ValueError as exc:
+                    raise BridgeError('Invalid batch-file quoting: {}'.format(exc))
+                if len(parts) != 1:
+                    raise BridgeError('Usage: batch LOCALFILE')
+                for original, command in read_batch_file(parts[0]):
+                    print('e7> {}'.format(original))
+                    if command.startswith('VERIFY '):
+                        _, uid, version = command.split()
+                        detail, good = verify_package(sock, uid, version)
+                        print(('VERIFIED ' if good else 'NOT VERIFIED ') +
+                              '{} version={} found={}'.format(detail['uid'], version, detail.get('version', 'not installed')))
+                    elif command.startswith('PKG '):
+                        details = package_detail(sock, command[4:])
+                        print(details)
+                    elif command.startswith('PKGS '):
+                        total, rows, following = parse_package_page(request(sock, command), int(command[5:]))
+                        for row in rows:
+                            print('{uid}  {version}  {name}'.format(**row))
+                        print('{} packages total; {}'.format(total, '[END]' if following is None else 'next offset {}'.format(following)))
+                    elif command == 'METRICS':
+                        for field, value in parse_metrics(request(sock, 'METRICS')).items():
+                            print('{}: {}'.format(field, value if value is not None else 'unavailable'))
+                    else:
+                        print(request(sock, command) or '(OK)')
+                continue
+            if cmd == 'PKGS_ALL':
+                records = collect_packages(sock)
+                for row in records:
+                    print('{uid}  {version}  {name}'.format(**row))
+                print('{} packages total'.format(len(records)))
+                continue
+            if cmd.startswith('PKGS '):
+                offset = int(cmd[5:])
+                total, rows, next_offset = parse_package_page(request(sock, cmd), offset)
+                for row in rows:
+                    print('{uid}  {version}  {name}'.format(**row))
+                print('{} packages total; {}'.format(total, '[END]' if next_offset is None else 'next: packages {}'.format(next_offset)))
+                continue
+            if cmd.startswith('PKG '):
+                detail = package_detail(sock, cmd[4:])
+                print('Package {}: {}'.format(detail['uid'], 'not installed' if not detail['installed'] else
+                                              '{} ({})'.format(detail['name'], detail['version'])))
+                continue
+            if cmd.startswith('VERIFY '):
+                _, uid, version = cmd.split()
+                detail, verified = verify_package(sock, uid, version)
+                print(('VERIFIED: ' if verified else 'NOT VERIFIED: ') + '{} expected={} found={}'.format(
+                    detail['uid'], version, detail.get('version', 'not installed')))
+                continue
             if cmd.startswith('PUSH '):
                 if admin is None:
                     raise BridgeError('Push requires an authenticated administrative session')

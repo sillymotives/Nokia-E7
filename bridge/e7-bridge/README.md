@@ -1,15 +1,63 @@
-# E7 Bridge v0.7.0: staged SIS installer launch
+# E7 Bridge v0.8.0: native SIS package inventory & verification
 
 A manually launched Qt 4.7.4 native Symbian Belle agent on the Nokia E7,
-with a Python 3 Debian controller. **v0.7.0 has passed its physical first-deployment pilot** on 2026-10-10;
-the operator built the native Symbian bridge and successfully deployed a
-data-only SIS from Sanctuary. The broader post-install regression gate is pending. v0.4.1 connection persistence is
+with a Python 3 Debian controller. **v0.8.0 is a source candidate: Symbian SDK build and phone registry-read acceptance PENDING.**
+The previous v0.7.0 remote SIS installer experiment passed physical E7 acceptance
+(69-byte marker present; native music, Wi-Fi, standby and remembered settings working). v0.4.1 connection persistence is
 physically accepted. The v0.5 read-only Field Deck transfer was operator-tested
-and delivered a readable HTML artifact to Sanctuary. v0.5 and v0.6 have both been merged after physical acceptance.
+and delivered a readable HTML artifact to Sanctuary. v0.5, v0.6 and v0.7 have been merged after physical acceptance.
 
-## New in v0.7: owner-triggered installer hand-off
+## New in v0.8: a read-only native package manager
 
-**Physical milestone:** the disposable SIS produced the expected 69-byte `C:/Data/E7DeployProbe/probe.txt` on the E7. No app icon is expected for a data-only package. The legacy MakeSIS `/tmp`-path bug was fixed in the probe builder. See [DEPLOYMENT.md](DEPLOYMENT.md); the bridge REPL currently works best with one command pasted at a time.
+Sanctuary can now request SIS package entries **from Belle's own Software
+Install registry**, including data-only packages without launcher icons:
+
+```text
+packages           # first twelve installed base package UIDs, names and versions
+packages 12        # next page
+packages all       # bounded full native inventory (max 2,000 entries)
+pkg 0xE94B7002    # inspect the E7 Deployment Probe installed in v0.7
+verify 0xE94B7002 0.1.0  # check native registry UID/version after installation
+```
+
+This uses Symbian `Swi::RSisRegistrySession` / `RSisRegistryEntry`, linked with
+`sisregistryclient` and requiring `ReadUserData` (already on the executable).
+All commands are read-only; no entitlement or security capability is elevated.
+`packages` lists **base SIS packages** via `InstalledUidsL`, not separate
+augmentations and not necessarily every AppArc launcher. The tool reports
+`NOT VERIFIED` when an expected package or version is absent; it does not
+mistake `LAUNCH_REQUESTED` for an install completion.
+
+The host controller also provides `batch FILE` for up to forty prevalidated,
+**read-only** commands in a local UTF-8 text file. This is the reliable way to
+avoid multiline-paste/terminal-echo interleaving. A pasted blob containing
+literal embedded newlines is rejected rather than treated as a malformed path.
+Example `batch` file:
+
+```text
+ping
+info
+packages 0
+pkg 0xE94B7002
+verify 0xE94B7002 0.1.0
+```
+
+For starting the matching host without guessing which directory you're in:
+
+```bash
+./build/serve-on-sanctuary.sh              # chooses the Linux route's IPv4
+./build/serve-on-sanctuary.sh 192.168.1.20 # or specify the actual Sanctuary LAN IPv4
+```
+
+The starter changes to the correct project directory, so `batch ./examples/acceptance.batch`
+works from the interactive `e7>` prompt. It does not modify existing pairing
+information or install anything on the Nokia.
+
+**Do not remotely upgrade the bridge while it is executing.** A safe
+self-upgrade hand-off with recovery is a future, separately tested milestone.
+The whole LAN protocol is authenticated but not encrypted.
+
+## Previous v0.7: owner-triggered installer hand-off
 
 Once the E7 is manually connected, `deploy ./DisposableProbe.sis` on Sanctuary:
 
@@ -137,7 +185,7 @@ python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-All **79** host-side Python tests passed in the authoring container for v0.7.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
+All **79** host-side Python tests passed in the authoring container for v0.8.0. The suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
 local report permissions, process differences, recording limits, interruptions,
 binary transfer limits/checksums/failure cleanup, and Symbian source assertions and admin write boundaries. It does not replace Symbian compilation or
 on-device measurements.
@@ -161,8 +209,8 @@ build does **not** modify the PocketJS checkout.
 cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.7.0.sis
-sha256sum dist/E7Bridge-v0.7.0.sis
+file dist/E7Bridge-v0.8.0.sis
+sha256sum dist/E7Bridge-v0.8.0.sis
 
 # Separately build the disposable DATA-ONLY installer test package:
 ./build/build-install-probe.sh --pocketjs ~/StudioProjects/pocketjs
@@ -176,7 +224,7 @@ Do not alter ROMPatcher or force an installation to bypass the failure.
 If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
 Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
 existing PocketJS development signing volume so this has the same signer as
-v0.4.1. Close the previous E7 Bridge before upgrading, and check that the new UI reports `v0.7.0`.
+v0.4.1. Close the previous E7 Bridge before upgrading, and check that the new UI reports `v0.8.0`.
 
 On Debian, substitute Sanctuary's **current** local IPv4 address:
 

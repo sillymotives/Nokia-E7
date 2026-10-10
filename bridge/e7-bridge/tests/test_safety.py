@@ -56,17 +56,18 @@ class PackageSafety(unittest.TestCase):
         self.assertIn('TARGET = E7Bridge', pro)
         self.assertIn('0xE94B7001', pro)
         self.assertIn('uid=0xE94B7001', builder)
-        self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData', pro)
+        self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData', pro)
         self.assertIn('E7Bridge_reg.rsc', builder)
-        self.assertIn('E7Bridge-v0.5.0.sis', builder)
+        self.assertIn('E7Bridge-v0.6.0.sis', builder)
 
     def test_agent_has_read_only_commands(self):
         cpp = (ROOT / 'phone' / 'main.cpp').read_text()
         for verb in ('PING', 'INFO', 'DRIVES', 'PROCS ', 'METRICS', 'LIST ', 'STAT ', 'QUIT'):
             self.assertIn('"' + verb + '"', cpp)
         self.assertNotIn('QProcess', cpp)
-        self.assertNotIn('QFile::WriteOnly', cpp)
-        self.assertNotIn('QFile::Remove', cpp)
+        self.assertIn('void handleAdminLine(', cpp)
+        self.assertIn('void finishUpload(', cpp)
+        self.assertNotIn('QProcess', cpp)
         self.assertIn('canonicalFilePath()', cpp)
         self.assertNotIn('QCryptographicHash::Sha256', cpp)
         self.assertIn('sha256_compat.h', cpp)

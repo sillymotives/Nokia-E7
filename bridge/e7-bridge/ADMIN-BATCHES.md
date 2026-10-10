@@ -108,7 +108,7 @@ This confirms the positive path for host-side preflight, mixed read/write execut
 Using the same Sanctuary v0.8.1 host and the existing JSONL journal, the operator ran:
 
 ```text
-batch --resume /home/darkstar/.local/share/e7-bridge/batches/e7-batch-20261010T182503Z-dbd81ba5.jsonl ./examples/admin-write-demo.batch
+batch --resume ~/.local/share/e7-bridge/batches/e7-batch-20261010T182503Z-dbd81ba5.jsonl ./examples/admin-write-demo.batch
 ```
 
 All five steps completed again. The authenticated `ping`, `info`, and installed-package version check passed; at step 4, the controller explicitly printed:

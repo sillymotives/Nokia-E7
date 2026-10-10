@@ -1,6 +1,6 @@
 # E7 Bridge v0.9: private installed-software and process baseline
 
-**Status:** host-side source candidate. This work uses the **unchanged, physically accepted v0.8.0 Nokia E7 app** with the v0.9 Sanctuary controller. No Symbian rebuild or reinstall is required. The physical v0.9 collection has not yet been tested on the Nokia. Test suites use synthetic package/process data, not the user's private registry.
+**Status:** host-only v0.9 pilot captured the physical Nokia E7 on 2026-10-10. The phone remains on its existing v0.8.0 agent, with no Symbian rebuild or reinstall. A later capture comparison reported zero changes. Native music, Wi-Fi, standby and remembered-pairing regression checks are still pending. No private raw registry is committed to GitHub.
 
 ## What it collects
 
@@ -68,3 +68,11 @@ No package installation/removal, process changes, ROMPatcher operation, writes t
 5. Check music playback, Wi-Fi, normal standby and remembered connection settings. Keep v0.8.1 host as rollback if v0.9 misbehaves.
 
 Only after real-device acceptance should this candidate be merged into `main`.
+
+## Physical handset first baseline (2026-10-10)
+
+The operator used the v0.9 host with the existing v0.8.0 E7 agent and produced an idle inventory with **407 installed base SIS packages** and **168 running process entries**. Raw memory readings at that instant were **257,228,800 bytes total** and **148,140,032 bytes free**; battery readings were left raw. The operator also reported `baseline diff` found **zero changes** between captures. Only one raw capture was shared for review, so the second capture and diff outputs have not been independently examined. These are physical host/handset observations, not synthetic test fixtures.
+
+The initial Markdown review contained a **false-positive Ovi naming bug**: the substring `ovi` appeared inside ordinary words such as `provider` and `provisioning`. The report heuristic now requires `ovi` at the start of a word or package-name token, while recognising `Ovi Music`, `Ovisync` and `ovistore`. It additionally marks tightly named `nokiastoreclient`, `NokiaAnalyticsCollector`, and Norton/Symantec packages for further investigation only; it does not imply they are unused or removable. A new regression test covers these cases and the Linux suite now passes **137/137 tests**.
+
+No raw inventory, installed-process list, private journal, or pairing data was included in this source change. Keep this PR draft until native phone regression checks are reported.

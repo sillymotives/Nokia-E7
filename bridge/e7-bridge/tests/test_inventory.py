@@ -58,6 +58,31 @@ class InventoryValidation(unittest.TestCase):
         self.assertFalse(results[0]['possible_process_name_overlaps'])
         self.assertIn('not evidence',inv.report(sample()))
 
+    def test_real_handset_ovi_false_positives_and_narrow_indicators(self):
+        """Do not call providers/provisioning historical Ovi packages."""
+        names = [
+            'callprovider', 'provisioningfilestub',
+            'sipconnectionproviderstub', 'serviceprovidersettings',
+            'vccclientprovisioningadapterstub', 'Wrt Service Providers',
+            'Ovi Music', 'Ovisync', 'ovistoreNFCplugin DLL',
+            'nokiastoreclient', 'NokiaAnalyticsCollector',
+            '-Norton AntiVirus', 'Symantec Symbian Hack',
+        ]
+        snapshot = sample(1)
+        snapshot['packages'] = [
+            {'uid': '0x{:08X}'.format(i + 1), 'name': name, 'version': '1.0.0'}
+            for i, name in enumerate(names)
+        ]
+        snapshot['package_count'] = len(names)
+        output = inv.leads(snapshot)
+        flagged = {row['name'] for row in output}
+        for false_positive in names[:6]:
+            self.assertNotIn(false_positive, flagged)
+        for legitimate_lead in names[6:]:
+            self.assertIn(legitimate_lead, flagged)
+        self.assertNotIn('`callprovider`', inv.report(snapshot))
+        self.assertIn('`Ovi Music`', inv.report(snapshot))
+
     def test_duplicate_registry_or_process_control_rejected(self):
         original=sample()
         variants=[]

@@ -1,4 +1,4 @@
-# E7 Bridge v0.4.0: Black Box diagnostics (experimental)
+# E7 Bridge v0.4.1: Remember last successful pairing
 
 A manually launched **read-only** native Qt 4.7.4 agent for the Nokia E7-00
 running Belle, with a Python 3 Debian terminal controller. Built on the already
@@ -8,6 +8,16 @@ and confirmed working for `ping`, `info`, `metrics`, `ps save`, `capture`,
 `diff`, and `record 3 10`. The native music player, Wi-Fi and normal standby
 were reported working after exit. Tests remain operator-observed, not CI
 hardware automation or evidence of long-term resource consumption.
+
+## v0.4.1 quality-of-life improvement
+
+- The Nokia now pre-fills the **last successfully authenticated** Debian IPv4 address and pairing key on its next launch, so rebooting does not require retyping them.
+- The default **Remember IP + key on this phone** checkbox enables persistence; disable it to clear saved settings immediately, or press **Forget saved pairing** to clear both the saved values and current text fields.
+- The key is stored as **unencrypted local configuration** in the app's own Symbian private UID3 directory on phone memory (C:); it is not written to publicly readable `C:/data/.config` and is never committed to Git. Device-level compromise or backups can still expose it.
+- Persistence occurs **only after successful mutual HMAC authentication**. Failed connection attempts never replace the last valid values. **No auto-connect**, new system capability, remote write, firmware modification, or protocol change. The host v0.4 controller remains compatible.
+- `E7Bridge-v0.4.1.sis` was built and installed on the physical Nokia E7 with the existing development UID and signing setup. Phone-side save/relaunch/incorrect-key/forget checks and music, Wi-Fi and standby regression checks were reported passing on 2026-10-10.
+
+See [PAIRING-PERSISTENCE.md](PAIRING-PERSISTENCE.md) for the test/rollback gate.
 
 ## What is new
 
@@ -33,7 +43,7 @@ preserved as `unavailable`, not silently replaced with plausible-looking data.
 ## Safety and trust model
 
 - Same application UID `0xE94B7001`, same development signing identity, version
-  raised to `0.4.0`. Original Nokia firmware is *not modified*.
+  raised to `0.4.1`. Original Nokia firmware is *not modified*.
 - Exactly the existing `NetworkServices ReadUserData` capabilities: no additional
   privileged rights, process control, property changes, autostart or remote shell.
 - Native `HAL::Get` and `RProperty::Get` only; no write-mode operations.
@@ -53,7 +63,7 @@ python3 -m unittest discover -s tests -v
 bash -n build/*.sh
 ```
 
-All **27** host-side Python tests passed in the authoring container. The test
+All **42** host-side Python tests passed in the authoring container. The test
 suite covers HMAC, framing, bounded `ps` pagination, metrics validation,
 local report permissions, process differences, recording limits, interruption,
 and read-only source assertions. It does not replace Symbian compilation or
@@ -78,8 +88,8 @@ build does **not** modify the PocketJS checkout.
 cd ~/StudioProjects/Nokia-E7/bridge/e7-bridge  # or wherever cloned
 python3 -m unittest discover -s tests -v
 ./build/build-with-pocketjs.sh --pocketjs ~/StudioProjects/pocketjs
-file dist/E7Bridge-v0.4.0.sis
-sha256sum dist/E7Bridge-v0.4.0.sis
+file dist/E7Bridge-v0.4.1.sis
+sha256sum dist/E7Bridge-v0.4.1.sis
 ```
 
 If the native compile or SIS packaging fails, **stop** and inspect the error.
@@ -88,7 +98,7 @@ Do not alter ROMPatcher or force an installation to bypass the failure.
 If the build succeeds, copy the SIS to the Nokia's `E:/Installs` and use File
 Manager to upgrade the installed E7 Bridge **on C: (phone memory)**. Retain the
 existing PocketJS development signing volume so this has the same signer as
-v0.3.0. Close v0.3.0 first, and check that the new UI reports `v0.4.0`.
+v0.4.0. Close v0.4.0 first, and check that the new UI reports `v0.4.1`.
 
 On Debian, substitute Sanctuary's **current** local IPv4 address:
 

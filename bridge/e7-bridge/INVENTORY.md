@@ -76,3 +76,17 @@ The operator used the v0.9 host with the existing v0.8.0 E7 agent and produced a
 The initial Markdown review contained a **false-positive Ovi naming bug**: the substring `ovi` appeared inside ordinary words such as `provider` and `provisioning`. The report heuristic now requires `ovi` at the start of a word or package-name token, while recognising `Ovi Music`, `Ovisync` and `ovistore`. It additionally marks tightly named `nokiastoreclient`, `NokiaAnalyticsCollector`, and Norton/Symantec packages for further investigation only; it does not imply they are unused or removable. A new regression test covers these cases and the Linux suite now passes **137/137 tests**.
 
 No raw inventory, installed-process list, private journal, or pairing data was included in this source change. Keep this PR draft until native phone regression checks are reported.
+
+## Physical music-playing comparison (2026-10-10)
+
+The operator separately supplied a second real E7 capture taken with the native music player running, allowing an exact comparison against the prior idle JSON:
+
+| Measure | Idle | Music playing |
+| --- | ---: | ---: |
+| Base SIS packages | 407 | 407 |
+| Process entries | 168 | 170 |
+| Free RAM, bytes | 148,140,032 | 146,718,720 |
+
+Both package inventories were identical. The process set gained `mpx.exe[102072c3]0001` and `!SensorServer[1020507e]0001`, with no disappearing processes. Free RAM fell by 1,421,312 bytes (about 1.36 MiB). MPX is plausibly related to native music playback; this one comparison cannot establish why SensorServer appeared or attribute all memory changes to music. The Norton-related `symc_AV.exe` and `symc_LM.exe` were present in **both** snapshots.
+
+**Norton historical provenance:** The operator clarified that Norton was installed during the earlier ROM-dump effort, not primarily for antivirus protection. The August 2026 experiment used the historic Norton quarantine-restore route to stage the Symbian³ `patcherS3.ldd` driver; a `patcherShadow.ldd` alternative caused RomPatcher+ soft resets and was abandoned. The correct setup enabled Open4All / Install Server RP+, allowing Dumberdore to capture the merged live `Z:` tree (13,356 files). Historical descriptions of the original Norton exploit recommend uninstalling the carrier after its restore function, but **this handset still runs two Norton processes**, and this snapshot alone cannot establish their present dependencies or safe removal. Treat Norton/Symantec as **exploit-bootstrap provenance requiring preservation and recovery review**, not routine bloatware. Do not remove or disable it on the basis of this inventory. The raw capture files are intentionally excluded from the public repository.

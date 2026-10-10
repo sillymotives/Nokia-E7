@@ -102,3 +102,21 @@ The operator used Sanctuary host v0.8.1 with the unchanged, physically installed
 - A private journal was emitted: `e7-batch-20261010T182503Z-dbd81ba5.jsonl`. The controller printed `Batch finished`.
 
 This confirms the positive path for host-side preflight, mixed read/write execution, one atomic staged upload, immediate size readback and durable receipt generation on the physical phone. It does **not** by itself prove an interrupted physical upload can safely resume, nor end-to-end rollback of multi-step changes. Repeating the same demo is supposed to refuse overwrite. A safely completed-job resume test should skip the existing upload after checking its size and logged receipt; uncertain in-progress writes remain blocked for manual inspection.
+
+## Completed-batch resume accepted on physical E7 (2026-10-10)
+
+Using the same Sanctuary v0.8.1 host and the existing JSONL journal, the operator ran:
+
+```text
+batch --resume /home/darkstar/.local/share/e7-bridge/batches/e7-batch-20261010T182503Z-dbd81ba5.jsonl ./examples/admin-write-demo.batch
+```
+
+All five steps completed again. The authenticated `ping`, `info`, and installed-package version check passed; at step 4, the controller explicitly printed:
+
+```text
+Already staged; previous authenticated receipt and current size verified.
+```
+
+The upload was **skipped**, not blindly replayed. The final `stat` confirmed `E:/KAI/INBOX/batch-hello-v081.txt` remains 63 bytes, and the same journal was reported with `Batch finished`.
+
+**Accepted scope:** real handset positive-path batch execution and **completed-upload resume** with journal and remote size checks. This is **not** a fresh remote SHA-256 check, proof of interruption recovery, multi-step atomic rollback, or privileged filesystem access. These are separate future requirements. The 122-case host test suite passed during development.

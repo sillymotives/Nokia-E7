@@ -1,4 +1,4 @@
-// E7 Bridge v0.7.0: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.8.0: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, outbound TCP, HMAC authenticated.
 // Host may send signed admin writes to public data storage / package staging.
 // No raw shell, boot service, or firmware modification commands.
@@ -28,6 +28,8 @@
 #include <e32base.h> // TFindProcess and TFullName enumerate process names read-only
 #include <e32property.h> // RProperty::Get; read only
 #include <hal.h> // HAL::Get; read only
+#include <swi/sisregistrysession.h> // InstalledUidsL/IsInstalledL: ReadUserData
+#include <swi/sisregistryentry.h> // PackageNameL/VersionL: read-only
 #endif
 
 static const int kPort = 46270;
@@ -85,7 +87,7 @@ public:
           adminSequence(0), uploadActive(false), uploadSize(0), uploadReceived(0) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.7.0\nAuthenticated diagnostic + admin link", this);
+            "E7 Bridge v0.8.0\nAuthenticated diagnostic + admin link", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -308,10 +310,32 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.7.0");
+                     "; E7 Bridge v0.8.0");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
+        if (line.startsWith("PKGS ")) {
+            const QByteArray arg = line.mid(5);
+            if (!QRegExp("[0-9]{1,4}").exactMatch(QString::fromLatin1(arg))) {
+                sendLine("ERR BAD_PACKAGE_OFFSET"); return;
+            }
+            bool ok = false;
+            const int offset = arg.toInt(&ok);
+            if (!ok || offset > 2000) { sendLine("ERR BAD_PACKAGE_OFFSET"); return; }
+            listInstalledPackages(offset);
+            return;
+        }
+        if (line.startsWith("PKG ")) {
+            const QByteArray arg = line.mid(4);
+            if (!QRegExp("[0-9a-fA-F]{8}").exactMatch(QString::fromLatin1(arg))) {
+                sendLine("ERR BAD_PACKAGE_UID"); return;
+            }
+            bool ok = false;
+            const uint uid = arg.toUInt(&ok, 16);
+            if (!ok) { sendLine("ERR BAD_PACKAGE_UID"); return; }
+            queryInstalledPackage(TUid::Uid(static_cast<TInt>(uid)));
+            return;
+        }
         if (line == "FILEINFO") { sendProbeInfo(); return; }
         if (line.startsWith("FILECHUNK ")) {
             const QByteArray arg = line.mid(10);
@@ -629,6 +653,123 @@ private slots:
                        ". Complete/inspect Belle installer if prompted.");
     }
 
+    // v0.8: query the native Software Install registry, not AppArc menu icons.
+    // A data-only package has no launcher registration but does have a SIS UID.
+    // RSisRegistrySession::InstalledUidsL requires ReadUserData, already held.
+    // Use small, deterministic pages and never expose package-owned file paths.
+    static QString registryUid(TUid uid) {
+        return "0x" + QString("%1").arg(static_cast<uint>(uid.iUid),
+                                         8, 16, QChar('0')).toUpper();
+    }
+    static QString registryName(const HBufC *name) {
+        if (!name) return "(unnamed)";
+        const QString raw = QString::fromUtf16(
+            reinterpret_cast<const ushort *>(name->Ptr()), name->Length());
+        QString result;
+        for (int i = 0; i < raw.size() && result.size() < 100; ++i) {
+            const ushort c = raw.at(i).unicode();
+            result.append(c >= 32 && c <= 126 && c != '|' ? QChar(c) : QChar('?'));
+        }
+        return result.isEmpty() ? "(unnamed)" : result;
+    }
+    static QString registryVersion(const TVersion &value) {
+        return QString::number(value.iMajor) + "." +
+               QString::number(value.iMinor) + "." +
+               QString::number(value.iBuild);
+    }
+    void queryInstalledPackage(TUid uid) {
+#ifdef Q_OS_SYMBIAN
+        Swi::RSisRegistrySession registry;
+        const TInt sessionError = registry.Connect();
+        if (sessionError != KErrNone) {
+            sendLine("ERR REGISTRY_CONNECT " + QByteArray::number(sessionError));
+            return;
+        }
+        Swi::RSisRegistryEntry entry;
+        const TInt openError = entry.Open(registry, uid);
+        if (openError == KErrNotFound) {
+            registry.Close();
+            sendB64("uid=" + registryUid(uid) + "\ninstalled=no");
+            return;
+        }
+        if (openError != KErrNone) {
+            registry.Close();
+            sendLine("ERR REGISTRY_OPEN " + QByteArray::number(openError));
+            return;
+        }
+        TVersion version(0, 0, 0);
+        TRAPD(versionError, version = entry.VersionL());
+        HBufC *name = 0;
+        TRAPD(nameError, name = entry.PackageNameL());
+        const QString label = registryName(name);
+        delete name;
+        entry.Close();
+        registry.Close();
+        if (versionError != KErrNone || nameError != KErrNone) {
+            sendLine("ERR REGISTRY_READ"); return;
+        }
+        sendB64("uid=" + registryUid(uid) +
+                "\ninstalled=yes\nversion=" + registryVersion(version) +
+                "\nname=" + label);
+#else
+        Q_UNUSED(uid);
+        sendLine("ERR SYMBIAN_ONLY");
+#endif
+    }
+    void listInstalledPackages(int offset) {
+#ifdef Q_OS_SYMBIAN
+        Swi::RSisRegistrySession registry;
+        const TInt sessionError = registry.Connect();
+        if (sessionError != KErrNone) {
+            sendLine("ERR REGISTRY_CONNECT " + QByteArray::number(sessionError));
+            return;
+        }
+        RArray<TUid> uids;
+        TRAPD(listError, registry.InstalledUidsL(uids));
+        if (listError != KErrNone || uids.Count() > 2000) {
+            uids.Close(); registry.Close();
+            sendLine("ERR REGISTRY_LIST_FAILED"); return;
+        }
+        // The OS does not promise list order; sort UID values for stable paging.
+        for (int i = 0; i < uids.Count(); ++i) {
+            for (int j = i + 1; j < uids.Count(); ++j) {
+                if (static_cast<uint>(uids[j].iUid) < static_cast<uint>(uids[i].iUid)) {
+                    const TUid tmp = uids[i]; uids[i] = uids[j]; uids[j] = tmp;
+                }
+            }
+        }
+        QStringList lines;
+        lines << "total=" + QString::number(uids.Count());
+        const int end = qMin(offset + 12, uids.Count());
+        for (int i = offset; i < end; ++i) {
+            Swi::RSisRegistryEntry entry;
+            if (entry.Open(registry, uids[i]) != KErrNone) {
+                uids.Close(); registry.Close();
+                sendLine("ERR REGISTRY_ENTRY_OPEN"); return;
+            }
+            TVersion version(0, 0, 0);
+            TRAPD(versionError, version = entry.VersionL());
+            HBufC *name = 0;
+            TRAPD(nameError, name = entry.PackageNameL());
+            const QString label = registryName(name);
+            delete name;
+            entry.Close();
+            if (versionError != KErrNone || nameError != KErrNone) {
+                uids.Close(); registry.Close();
+                sendLine("ERR REGISTRY_ENTRY_READ"); return;
+            }
+            lines << registryUid(uids[i]) + "|" + registryVersion(version) + "|" + label;
+        }
+        if (end < uids.Count()) lines << "[NEXT] " + QString::number(end);
+        else lines << "[END]";
+        uids.Close();
+        registry.Close();
+        sendB64(lines.join("\n"));
+#else
+        Q_UNUSED(offset);
+        sendLine("ERR SYMBIAN_ONLY");
+#endif
+    }
     void listProcesses(int offset) {
 #ifdef Q_OS_SYMBIAN
         // TFindProcess returns names only. We do not open, kill, or control a process.

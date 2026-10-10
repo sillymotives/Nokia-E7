@@ -53,9 +53,9 @@ class SavedPairingSafety(unittest.TestCase):
     def test_in_place_upgrade_with_one_basic_write_capability(self):
         self.assertIn('TARGET.UID3 = 0xE94B7001',PRO)
         self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData',PRO)
-        self.assertIn('E7Bridge-v0.7.0.sis',BUILD)
-        self.assertIn('($uid),0,7,0',BUILD)
-        self.assertIn('E7 Bridge v0.7.0',CPP)
+        self.assertIn('E7Bridge-v0.8.0.sis',BUILD)
+        self.assertIn('($uid),0,8,0',BUILD)
+        self.assertIn('E7 Bridge v0.8.0',CPP)
 
     def test_network_protocol_does_not_offer_system_mutation(self):
         self.assertNotIn('QProcess',CPP)

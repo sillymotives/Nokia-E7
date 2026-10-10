@@ -1,6 +1,6 @@
 # E7 Bridge v0.6: begin owner-controlled remote administration
 
-Status: **v0.6 physical acceptance passed and merged** on 2026-10-10. v0.7 installer-launch extension remains untested on hardware.
+Status: **v0.6 physical acceptance passed and merged** on 2026-10-10. v0.7 installer-launch extension also passed on-device acceptance. v0.8 registry queries remain untested on hardware.
 
 ## Product goal
 

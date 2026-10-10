@@ -1,0 +1,8 @@
+# Read-only v0.8 acceptance checks, run from Sanctuary via: batch ./examples/acceptance.batch
+ping
+info
+packages 0
+pkg 0xE94B7002
+verify 0xE94B7002 0.1.0
+ls C:/Data/E7DeployProbe
+stat C:/Data/E7DeployProbe/probe.txt

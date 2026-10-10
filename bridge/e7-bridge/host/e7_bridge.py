@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E7 Bridge v0.8.0: Linux host for a user-operated Symbian diagnostic and admin agent.
+"""E7 Bridge v0.8.1: Linux host for a user-operated Symbian diagnostic and admin agent.
 
 Requires Python 3.8+. No nonstandard Python packages.
 Protocol v1 uses HMAC-SHA256 to authenticate a device over a locally trusted
@@ -35,6 +35,10 @@ ADMIN_MAX_BYTES = 8388608
 ADMIN_CHUNK = 2048
 ADMIN_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z')
 RECEIVE_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'received'
+BATCH_JOURNAL_DIR = Path.home() / '.local' / 'share' / 'e7-bridge' / 'batches'
+BATCH_ADMIN_MAX_FILE = 8192
+BATCH_ADMIN_MAX_STEPS = 40
+BATCH_ADMIN_TOTAL_BYTES = 32 * 1024 * 1024
 METRIC_FIELDS = ('ram_total_bytes', 'ram_free_bytes', 'battery_level_raw', 'battery_status_raw', 'charging_status_raw')
 
 
@@ -287,6 +291,14 @@ def normalize_command(text):
             raise BridgeError('Usage: verify UID MAJOR.MINOR.BUILD')
         return 'VERIFY {} {}'.format(normalize_uid(items[0]), items[1])
     if verb == 'batch' and arg:
+        if arg.startswith('--write '):
+            return 'BATCH_WRITE ' + arg[8:]
+        if arg.startswith('--plan '):
+            return 'BATCH_PLAN ' + arg[7:]
+        if arg.startswith('--resume '):
+            return 'BATCH_RESUME ' + arg[9:]
+        if arg in ('--write', '--plan', '--resume'):
+            raise BridgeError('batch option needs a manifest (and resume journal when applicable)')
         return 'BATCH ' + arg
     if verb == 'pull' and arg.lower() == 'probe':
         return 'PULL_PROBE'
@@ -322,7 +334,7 @@ def normalize_command(text):
                 raise BridgeError('stat needs a path')
             return 'STAT ' + arg
         return 'LIST ' + (arg or 'E:/')
-    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, packages [offset|all], pkg UID, verify UID VERSION, batch FILE, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
+    raise BridgeError('Supported: ping, info, drives, ls, stat, ps, metrics, packages [offset|all], pkg UID, verify UID VERSION, batch FILE, batch --plan FILE, batch --write FILE, batch --resume JOURNAL FILE, capture, diff, record, pull probe, push LOCAL [inbox|installs], deploy FILE.sis, help, exit')
 
 
 def parse_probe_info(reply):
@@ -455,7 +467,7 @@ def validate_push_name(path, bucket):
     return name
 
 
-def push_file(admin, source, bucket='inbox'):
+def push_file(admin, source, bucket='inbox', expected_digest=None, expected_size=None):
     """Atomically stage one file on E:, with no phone-side install/unlock.
 
     All write commands have session-bound request AND response HMACs. The phone
@@ -477,6 +489,9 @@ def push_file(admin, source, bucket='inbox'):
             digest.update(block)
         expected = digest.hexdigest()
         size = details.st_size
+        if (expected_digest is not None and expected != expected_digest) or (
+                expected_size is not None and size != expected_size):
+            raise BridgeError('Local source changed since batch preflight; not uploading')
         stream.seek(0)
         begun = True  # Cancel even if BEGIN's response is lost after staging.
         try:
@@ -507,7 +522,7 @@ def push_file(admin, source, bucket='inbox'):
             raise
 
 
-def deploy_package(admin, source):
+def deploy_package(admin, source, expected_digest=None, expected_size=None):
     """Stage a signed SIS candidate, then request Belle's installer UI.
 
     Return value means only that AppArc accepted the file-open request,
@@ -522,7 +537,8 @@ def deploy_package(admin, source):
         raise BridgeError('Deploy source must be a regular non-symlink SIS')
     if not (0 < source_path.stat().st_size <= ADMIN_MAX_BYTES):
         raise BridgeError('Deploy package must be 1 byte to 8 MiB')
-    remote, size, digest = push_file(admin, source, 'installs')
+    remote, size, digest = push_file(admin, source, 'installs',
+                                      expected_digest=expected_digest, expected_size=expected_size)
     response = admin.send('LAUNCH {} {} {}'.format(name, size, digest))
     if response != 'LAUNCH_REQUESTED':
         raise BridgeError('Unexpected installer-launch acknowledgement')
@@ -732,8 +748,257 @@ def print_process_diff(changes):
         print('No differences in this pair of non-atomic snapshots.')
 
 
+def run_batch_read_step(sock, command, assert_verify=False):
+    """Display one permitted read-only step; assert registry checks in write jobs."""
+    if command.startswith('VERIFY '):
+        _, uid, version = command.split()
+        detail, good = verify_package(sock, uid, version)
+        message = ('VERIFIED ' if good else 'NOT VERIFIED ') + \
+                  '{} version={} found={}'.format(detail['uid'], version, detail.get('version', 'not installed'))
+        print(message)
+        if assert_verify and not good:
+            raise BridgeError('Batch verification failed; stopping before subsequent writes')
+    elif command.startswith('PKG '):
+        print(package_detail(sock, command[4:]))
+    elif command.startswith('PKGS '):
+        total, rows, following = parse_package_page(request(sock, command), int(command[5:]))
+        for row in rows:
+            print('{uid}  {version}  {name}'.format(**row))
+        print('{} packages total; {}'.format(total, '[END]' if following is None else
+                                              'next offset {}'.format(following)))
+    elif command == 'PKGS_ALL':
+        rows = collect_packages(sock)
+        for row in rows:
+            print('{uid}  {version}  {name}'.format(**row))
+        print('{} packages total'.format(len(rows)))
+    elif command == 'METRICS':
+        for field, value in parse_metrics(request(sock, 'METRICS')).items():
+            print('{}: {}'.format(field, value if value is not None else 'unavailable'))
+    else:
+        print(request(sock, command) or '(OK)')
+
+
+def _read_admin_manifest(source):
+    path = Path(source).expanduser().absolute()
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > BATCH_ADMIN_MAX_FILE:
+        raise BridgeError('Write batch must be a regular non-symlink UTF-8 file <=8 KiB')
+    try:
+        data = path.read_bytes()
+        source_text = data.decode('utf-8', 'strict')
+    except UnicodeError:
+        raise BridgeError('Write batch must contain valid UTF-8')
+    if len(data) > BATCH_ADMIN_MAX_FILE:
+        raise BridgeError('Write batch exceeds the 8 KiB limit')
+    return path, data, source_text
+
+
+def _preflight_upload(source, bucket):
+    """Capture a source fingerprint without sending a single byte to the phone."""
+    name = validate_push_name(str(source), bucket)
+    if source.is_symlink() or not source.is_file():
+        raise BridgeError('Write batch source must be a regular non-symlink file: {}'.format(source))
+    with source.open('rb') as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > ADMIN_MAX_BYTES:
+            raise BridgeError('Write batch source must be a regular file <=8 MiB')
+        if bucket == 'installs' and before.st_size == 0:
+            raise BridgeError('Cannot deploy an empty SIS')
+        digest = hashlib.sha256()
+        while True:
+            chunk = stream.read(65536)
+            if not chunk:
+                break
+            digest.update(chunk)
+        after = os.fstat(stream.fileno())
+        if (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
+            raise BridgeError('Local file changed during preflight')
+    return {'source': str(source), 'bucket': bucket, 'name': name, 'size': before.st_size,
+            'sha256': digest.hexdigest(),
+            'remote': 'E:/Installs/' + name if bucket == 'installs' else 'E:/KAI/INBOX/' + name}
+
+
+def prepare_write_batch(source):
+    """Validate an entire explicit write job before any on-device action.
+
+    A single signed admin session authenticates each write, but the job itself is
+    NOT transactional. Local files are resolved relative to the manifest folder.
+    """
+    manifest, content, text = _read_admin_manifest(source)
+    entries, targets, transfer_bytes = [], set(), 0
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        cmd = normalize_command(line)
+        record = {'line': lineno, 'text': line.strip(), 'command': cmd, 'type': 'read'}
+        if cmd.startswith(('PUSH ', 'DEPLOY ')):
+            verb = 'deploy' if cmd.startswith('DEPLOY ') else 'push'
+            try:
+                args = shlex.split(cmd.split(' ', 1)[1])
+            except ValueError as exc:
+                raise BridgeError('Line {}: invalid shell-style path quoting: {}'.format(lineno, exc))
+            if (verb == 'deploy' and len(args) != 1) or (verb == 'push' and len(args) not in (1, 2)):
+                raise BridgeError('Line {}: bad push/deploy arguments'.format(lineno))
+            bucket = 'installs' if verb == 'deploy' else (args[1].lower() if len(args) == 2 else 'inbox')
+            local = Path(args[0]).expanduser()
+            if not local.is_absolute():
+                local = manifest.parent / local
+            if verb == 'deploy' and local.name.lower().startswith('e7bridge'):
+                raise BridgeError('Batch refuses self-upgrading the running E7 Bridge')
+            transfer = _preflight_upload(local, bucket)
+            if transfer['remote'].casefold() in targets:
+                raise BridgeError('Batch repeats a destination: {}'.format(transfer['remote']))
+            targets.add(transfer['remote'].casefold())
+            transfer_bytes += transfer['size']
+            if transfer_bytes > BATCH_ADMIN_TOTAL_BYTES:
+                raise BridgeError('Write batch total uploads exceed 32 MiB')
+            record.update(transfer)
+            record['type'] = verb
+        elif not (cmd in BATCH_SAFE or cmd == 'PKGS_ALL' or
+                  cmd.startswith(('LIST ', 'STAT ', 'PKGS ', 'PKG ', 'VERIFY '))):
+            raise BridgeError('Line {}: unsupported write-batch operation: {}'.format(lineno, line.strip()))
+        if entries and entries[-1]['type'] == 'deploy':
+            raise BridgeError('Installer launch must be the last batch step; verify after installing in a later job')
+        entries.append(record)
+        if len(entries) > BATCH_ADMIN_MAX_STEPS:
+            raise BridgeError('Write batch permits at most 40 steps')
+    if not entries:
+        raise BridgeError('Write batch is empty')
+    if not any(step['type'] != 'read' for step in entries):
+        raise BridgeError('Write batch has no writes: use ordinary batch FILE')
+    # Include all transfer fingerprints so resume cannot silently use changed data.
+    serial = json.dumps({'manifest_sha256': hashlib.sha256(content).hexdigest(),
+                         'steps': entries}, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    return {'path': str(manifest), 'sha256': hashlib.sha256(serial).hexdigest(),
+            'steps': entries, 'upload_bytes': transfer_bytes}
+
+
+def _batch_record(stream, data):
+    stream.write(json.dumps(data, sort_keys=True, separators=(',', ':')) + '\n')
+    stream.flush()
+    os.fsync(stream.fileno())
+
+
+def _new_batch_journal(plan, directory):
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(str(directory), 0o700)
+    for attempt in range(5):
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+        p = directory / ('e7-batch-' + stamp + '-' + secrets.token_hex(4) + '.jsonl')
+        try:
+            fd = os.open(str(p), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            continue
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            _batch_record(stream, {'event': 'plan', 'sha256': plan['sha256'],
+                                   'manifest': plan['path'], 'count': len(plan['steps']),
+                                   'upload_bytes': plan['upload_bytes']})
+        return p
+    raise BridgeError('Unable to allocate a unique batch receipt')
+
+
+def _resume_batch_journal(plan, receipt, directory):
+    directory = directory.resolve()
+    path = Path(receipt).expanduser().absolute()
+    if (path.is_symlink() or not path.is_file() or path.parent.resolve() != directory or
+            path.stat().st_size > 65536 or path.stat().st_mode & 0o077):
+        raise BridgeError('Resume requires an owner-only batch receipt from the bridge journal directory')
+    try:
+        entries = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()]
+    except (UnicodeError, ValueError):
+        raise BridgeError('Invalid journal syntax')
+    if not entries or entries[0].get('event') != 'plan' or entries[0].get('sha256') != plan['sha256']:
+        raise BridgeError('Batch plan/files changed; cannot resume this journal')
+    status = {}
+    for event in entries[1:]:
+        index = event.get('step')
+        if not isinstance(index, int) or not 0 <= index < len(plan['steps']):
+            raise BridgeError('Invalid batch journal step number')
+        if event.get('event') not in ('started', 'done', 'failed'):
+            raise BridgeError('Invalid journal step event')
+        status[index] = event['event']
+    for index, state in status.items():
+        if plan['steps'][index]['type'] != 'read' and state != 'done':
+            raise BridgeError('Ambiguous interrupted write at step {}: inspect the E7 before creating a new job'.format(index+1))
+    return path, status
+
+
+def _confirm_prior_upload(sock, step):
+    # Authenticated receipt from the previous run was recorded on disk; STAT
+    # confirms only size/presence today, not cryptographic integrity today.
+    response = request(sock, 'STAT ' + step['remote'])
+    expected = 'file | bytes={} | path={}'.format(step['size'], step['remote'])
+    if response != expected:
+        raise BridgeError('Previously staged file no longer matches its recorded size/path')
+
+
+def run_write_batch(sock, admin, plan, receipt=None, journal_dir=None):
+    """Execute a preflighted job, log each step, fail closed on ambiguity.
+
+    Per-file transfers are atomic. Whole jobs are not atomic and deployment is
+    only a launch request. Resume validates the manifest and local SHA hashes.
+    """
+    if admin is None:
+        raise BridgeError('Write batch requires an authenticated admin session')
+    directory = Path(journal_dir) if journal_dir is not None else BATCH_JOURNAL_DIR
+    if receipt is None:
+        journal = _new_batch_journal(plan, directory)
+        status = {}
+    else:
+        journal, status = _resume_batch_journal(plan, receipt, directory)
+    print('Batch receipt:', journal)
+    with journal.open('a', encoding='utf-8') as log:
+        for i, step in enumerate(plan['steps']):
+            print('[{}/{}] e7> {}'.format(i+1, len(plan['steps']), step['text']))
+            if status.get(i) == 'done' and step['type'] != 'read':
+                if step['type'] == 'push':
+                    _confirm_prior_upload(sock, step)
+                    print('Already staged; previous authenticated receipt and current size verified.')
+                elif step['type'] == 'deploy':
+                    print('Installer launch was previously requested; no duplicate launch.')
+                continue
+            _batch_record(log, {'event': 'started', 'step': i, 'kind': step['type']})
+            try:
+                if step['type'] == 'push':
+                    remote, size, digest = push_file(admin, step['source'], step['bucket'],
+                                                     expected_digest=step['sha256'], expected_size=step['size'])
+                    if (remote, size, digest) != (step['remote'], step['size'], step['sha256']):
+                        raise BridgeError('Upload receipt differed from the preflighted plan')
+                    _confirm_prior_upload(sock, step)
+                    print('Staged:', remote, '|', size, 'bytes | SHA-256', digest)
+                elif step['type'] == 'deploy':
+                    remote, size, digest = deploy_package(admin, step['source'],
+                                                          expected_digest=step['sha256'], expected_size=step['size'])
+                    if (remote, size, digest) != (step['remote'], step['size'], step['sha256']):
+                        raise BridgeError('Deployment receipt differed from the preflighted plan')
+                    print('Installer launch requested for', remote, '(not installation confirmation)')
+                else:
+                    run_batch_read_step(sock, step['command'], assert_verify=True)
+            except (BridgeError, OSError, UnicodeError) as exc:
+                _batch_record(log, {'event': 'failed', 'step': i, 'reason': str(exc)[:300]})
+                print('Batch stopped at step {}. Receipt: {}'.format(i+1, journal))
+                raise
+            _batch_record(log, {'event': 'done', 'step': i})
+    print('Batch finished. Receipt:', journal)
+    if plan['steps'][-1]['type'] == 'deploy':
+        print('Installer only LAUNCHED; confirm installation through Belle and a separate registry check.')
+    return journal
+
+
+def describe_write_batch(plan):
+    print('Preflight OK: {} steps, {} upload bytes'.format(len(plan['steps']), plan['upload_bytes']))
+    print('Plan SHA-256:', plan['sha256'])
+    for i, step in enumerate(plan['steps']):
+        if step['type'] == 'read':
+            print(' {:02d} READ   {}'.format(i+1, step['text']))
+        else:
+            print(' {:02d} {:6s} {} -> {} ({} bytes, SHA-256 {})'.format(
+                i+1, step['type'].upper(), step['source'], step['remote'], step['size'], step['sha256']))
+    print('Each file commit is atomic; THE WHOLE BATCH IS NOT TRANSACTIONAL.')
+    print('An interrupted write requires manual investigation, not blind retry.')
+
+
 def repl(sock, admin=None):
-    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, batch, capture, diff, record, pull probe, push, deploy, help, exit')
+    print('E7 authenticated. Commands: ping, info, drives, ls, stat, ps, metrics, packages, pkg, verify, batch, batch --plan, batch --write, batch --resume, capture, diff, record, pull probe, push, deploy, help, exit')
     while True:
         try:
             typed = input('e7> ')
@@ -758,6 +1023,9 @@ def repl(sock, admin=None):
                 print('pkg UID       Inspect a SIS package by 32-bit UID')
                 print('verify UID VERSION  Confirm registry has exact MAJOR.MINOR.BUILD')
                 print('batch FILE    Run up to 40 read-only terminal commands without multiline paste')
+                print('batch --plan FILE    Preflight up to 40 steps including writes, no device changes')
+                print('batch --write FILE   Execute read/write manifest, journal every step, no extra approvals')
+                print('batch --resume JOURNAL FILE   Resume completed stages, never blindly retry uncertain writes')
                 print('capture       Save telemetry and processes as local JSON (non-atomic)')
                 print('diff          Compare the two latest saved process snapshots (host only)')
                 print('record [N S]  Capture 2-12 samples, every 5-120 seconds (default 3 10)')
@@ -772,6 +1040,22 @@ def repl(sock, admin=None):
                 except (BridgeError, OSError):
                     pass
                 return
+            if cmd.startswith(('BATCH_PLAN ', 'BATCH_WRITE ', 'BATCH_RESUME ')):
+                mode, value = cmd.split(' ', 1)
+                try:
+                    args = shlex.split(value)
+                except ValueError as exc:
+                    raise BridgeError('Bad batch argument quoting: {}'.format(exc))
+                if (mode == 'BATCH_RESUME' and len(args) != 2) or (mode != 'BATCH_RESUME' and len(args) != 1):
+                    raise BridgeError('Usage: batch --plan FILE | batch --write FILE | batch --resume JOURNAL FILE')
+                plan = prepare_write_batch(args[-1])
+                if mode == 'BATCH_PLAN':
+                    describe_write_batch(plan)
+                else:
+                    if mode == 'BATCH_WRITE':
+                        describe_write_batch(plan)
+                    run_write_batch(sock, admin, plan, receipt=args[0] if mode == 'BATCH_RESUME' else None)
+                continue
             if cmd.startswith('BATCH '):
                 try:
                     parts = shlex.split(cmd[6:])
@@ -781,24 +1065,7 @@ def repl(sock, admin=None):
                     raise BridgeError('Usage: batch LOCALFILE')
                 for original, command in read_batch_file(parts[0]):
                     print('e7> {}'.format(original))
-                    if command.startswith('VERIFY '):
-                        _, uid, version = command.split()
-                        detail, good = verify_package(sock, uid, version)
-                        print(('VERIFIED ' if good else 'NOT VERIFIED ') +
-                              '{} version={} found={}'.format(detail['uid'], version, detail.get('version', 'not installed')))
-                    elif command.startswith('PKG '):
-                        details = package_detail(sock, command[4:])
-                        print(details)
-                    elif command.startswith('PKGS '):
-                        total, rows, following = parse_package_page(request(sock, command), int(command[5:]))
-                        for row in rows:
-                            print('{uid}  {version}  {name}'.format(**row))
-                        print('{} packages total; {}'.format(total, '[END]' if following is None else 'next offset {}'.format(following)))
-                    elif command == 'METRICS':
-                        for field, value in parse_metrics(request(sock, 'METRICS')).items():
-                            print('{}: {}'.format(field, value if value is not None else 'unavailable'))
-                    else:
-                        print(request(sock, command) or '(OK)')
+                    run_batch_read_step(sock, command)
                 continue
             if cmd == 'PKGS_ALL':
                 records = collect_packages(sock)

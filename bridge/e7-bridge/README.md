@@ -1,11 +1,30 @@
-# E7 Bridge v0.8.0: native SIS package inventory & verification
+# E7 Bridge host v0.8.1: authenticated write batches
+
+Sanctuary's controller can now run deliberate multi-step administration
+jobs against the **existing v0.8.0 phone agent**. No handset software update
+is needed. `batch FILE` stays read-only for compatibility;
+`batch --plan FILE` previews all steps, `batch --write FILE` executes explicit
+`push` / final `deploy` operations with a private per-step journal, and
+`batch --resume JOURNAL FILE` recovers only when the previous write has an
+unambiguous completion receipt. A `verify` mismatch aborts subsequent writes.
+
+**Physical acceptance on 2026-10-10:** the first five-step write batch passed
+against the Nokia E7, with an authenticated 63-byte upload, SHA-256 and size
+verification, and a private JSONL receipt. Linux suite: **122/122 passing**.
+Hardware interruption/resume acceptance remains pending.
+
+The batch is **not globally atomic**, and no protected OS writes or silent SIS
+installation have been introduced. See [ADMIN-BATCHES.md](ADMIN-BATCHES.md)
+and [examples/admin-write-demo.batch](examples/admin-write-demo.batch).
+
+## Phone agent v0.8.0: native SIS package inventory & verification
 
 A manually launched Qt 4.7.4 native Symbian Belle agent on the Nokia E7,
-with a Python 3 Debian controller. **v0.8.0 is a source candidate: Symbian SDK build and phone registry-read acceptance PENDING.**
+with a Python 3 Debian controller. **v0.8.0 has passed physical E7 acceptance, including native registry lookup, negative checks, music, Wi-Fi, standby and saved pairing.**
 The previous v0.7.0 remote SIS installer experiment passed physical E7 acceptance
 (69-byte marker present; native music, Wi-Fi, standby and remembered settings working). v0.4.1 connection persistence is
 physically accepted. The v0.5 read-only Field Deck transfer was operator-tested
-and delivered a readable HTML artifact to Sanctuary. v0.5, v0.6 and v0.7 have been merged after physical acceptance.
+and delivered a readable HTML artifact to Sanctuary. v0.5, v0.6, v0.7 and v0.8 have been merged after physical acceptance.
 
 ## New in v0.8: a read-only native package manager
 
@@ -28,7 +47,7 @@ augmentations and not necessarily every AppArc launcher. The tool reports
 `NOT VERIFIED` when an expected package or version is absent; it does not
 mistake `LAUNCH_REQUESTED` for an install completion.
 
-The host controller also provides `batch FILE` for up to forty prevalidated,
+The host controller retains the original `batch FILE` for up to forty prevalidated,
 **read-only** commands in a local UTF-8 text file. This is the reliable way to
 avoid multiline-paste/terminal-echo interleaving. A pasted blob containing
 literal embedded newlines is rejected rather than treated as a malformed path.
@@ -46,7 +65,7 @@ For starting the matching host without guessing which directory you're in:
 
 ```bash
 ./build/serve-on-sanctuary.sh              # chooses the Linux route's IPv4
-./build/serve-on-sanctuary.sh 192.168.1.20 # or specify the actual Sanctuary LAN IPv4
+./build/serve-on-sanctuary.sh 192.168.1.37 # or specify the actual Sanctuary LAN IPv4
 ```
 
 The starter changes to the correct project directory, so `batch ./examples/acceptance.batch`

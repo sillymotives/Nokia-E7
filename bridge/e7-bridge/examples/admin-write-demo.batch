@@ -1,0 +1,7 @@
+# E7 Bridge 0.8.1 host-only write batch acceptance
+# Run batch --plan first if you want to inspect exact upload paths and hashes.
+ping
+info
+verify 0xE94B7002 0.1.0
+push ./batch-hello-v081.txt inbox
+stat E:/KAI/INBOX/batch-hello-v081.txt

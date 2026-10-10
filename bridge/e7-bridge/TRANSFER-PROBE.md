@@ -1,6 +1,6 @@
 # E7 Bridge v0.5.0: first cable-free file transfer
 
-Prepared: 2026-10-10. **Experimental source candidate. Symbian SDK build and handset acceptance pending.**
+Prepared: 2026-10-10. **Physical handset transfer succeeded on 2026-10-10; scope-limited read-only transfer acceptance recorded.**
 
 ## Goal
 
@@ -41,3 +41,9 @@ Retain the already physically accepted `E7Bridge-v0.4.1.sis`. If compilation, au
 - Uploading or deleting files on the E7, modifying startup/ROM, running a shell, or enabling autostart.
 - Sending credentials, medical data, or any private content over the v0.5 plaintext channel.
 - Claiming real encryption or enterprise-grade authentication from a per-file SHA-256 transmitted over that same channel.
+
+## Physical handset result (2026-10-10)
+
+The operator built and installed E7 Bridge v0.5.0 on their Nokia E7, ran `pull probe` from Sanctuary, and returned the resulting native `.htm` file. The independently examined received artifact is 5,493 bytes with SHA-256 `c5e11110d3b7272a6fa58b8033a47a8689204cf0e3342ceb8d9d63ae05117777`, and contains the self-contained KAI Field Deck markup. This proves a real phone-to-Debian transport occurred and produced readable bytes. It does not independently establish an unchanged Git-tracked fixture on the phone without a matching pre-transfer source hash. The operator subsequently installed v0.6.0 and reported that `ping`, `info`, `push`, `ls`, and `stat` worked on the handset. Do not infer arbitrary file access or encryption from these tests.
+
+For this initial read-only feature, the source tests (54 passing) and physical transfer evidence are sufficient to merge, while the independent original-source hash remains a separately recorded provenance limitation.

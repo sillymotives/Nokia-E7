@@ -58,7 +58,7 @@ class PackageSafety(unittest.TestCase):
         self.assertIn('uid=0xE94B7001', builder)
         self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData', pro)
         self.assertIn('E7Bridge_reg.rsc', builder)
-        self.assertIn('E7Bridge-v0.8.2.sis', builder)
+        self.assertIn('E7Bridge-v0.8.3.sis', builder)
 
     def test_agent_has_read_only_commands(self):
         cpp = (ROOT / 'phone' / 'main.cpp').read_text()

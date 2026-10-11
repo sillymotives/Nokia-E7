@@ -37,14 +37,22 @@ class SymbianBackgroundPersistence(unittest.TestCase):
         self.assertIn('SLOT(backgroundNow())', CPP)
         self.assertIn('SLOT(exitBridge())', CPP)
         background = CPP.split('void backgroundNow() {', 1)[1].split('void exitBridge() {', 1)[0]
-        self.assertIn('showMinimized();', background)
+        # Symbian: lower the native window group, not Qt's minimized state.
+        self.assertIn('#include <coemain.h>', CPP)
+        self.assertIn('#ifdef Q_OS_SYMBIAN', background)
+        self.assertIn('CCoeEnv::Static()', background)
+        self.assertIn('RootWin().SetOrdinalPosition(-1);', background)
+        self.assertNotIn('showMinimized();', background.split('#else', 1)[0])
+        # On non-Symbian, preserve the original Qt fallback.
+        self.assertIn('showMinimized();', background.split('#else', 1)[1])
+        self.assertIn('LIBS += -lhal -lsisregistryclient -lcone -lws32', PRO)
         self.assertRegex(CPP, r'void exitBridge\(\) \{\s+[^}]*stopLink\(\);\s+QApplication::quit\(\);')
         self.assertNotIn('setQuitOnLastWindowClosed(false)', CPP)
 
     def test_version_uid_capabilities_and_installer_match(self):
-        self.assertIn('E7 Bridge v0.8.2', CPP)
-        self.assertIn('($uid),0,8,2', BUILD)
-        self.assertIn('E7Bridge-v0.8.2.sis', BUILD)
+        self.assertIn('E7 Bridge v0.8.3', CPP)
+        self.assertIn('($uid),0,8,3', BUILD)
+        self.assertIn('E7Bridge-v0.8.3.sis', BUILD)
         self.assertIn('TARGET.UID3 = 0xE94B7001', PRO)
         self.assertIn('TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData', PRO)
         capabilities = next(x for x in PRO.splitlines() if x.strip().startswith('TARGET.CAPABILITY ='))

@@ -59,3 +59,17 @@ The historical “two root children” heuristic is not the same as two root ref
 - `server_shutdown_reason=post_browse_observation_complete`; `no_client_parse_ack=true`, `socket_completion_is_not_phone_parse_ack=true`.
 
 **Scope:** This excludes reported host socket-write failures and unmatched requests to the *armed listener during its bounded observation*, but does **not** establish a parsed catalogue, complete update refresh, absence of other network traffic, or cache safety. The E7 UI still spun after shutdown. Next discriminator remains passively observing outbound packets while the spinner is active, on the confirmed phone IP and hotspot interface. No v0.14 payload change is justified yet.
+
+## Next diagnostic evidence and candidate v0.14 design (2026-10-11)
+
+The E7 operator reported **0 packets** in the 15-second *outbound-only* tcpdump summary. This is not a proof that no handset traffic occurred: the tcpdump filter used an assumed phone IPv4 (`10.42.0.85`) and hotspot interface (`wlxf0a7314bcc29`), and the test's simultaneity with the still-running updater was not independently established. No raw traffic was captured or shared. It is consistent with, but does not prove, an internal pending NCD/IAUpdate operation.
+
+The operator proposed testing a **dummy software listing** and explicitly does not intend to install it. Feasibility work in the historical Symbian source clarifies why a superficial top-level `ItemRef` would be a poor experiment:
+
+- [`CNcdLoadNodeOperationImpl::ItemRefL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp) asserts that items are not root-level content-source nodes; they require a folder parent.
+- [`CNcdPreminetProtocolEntityRefParser`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_entityref.cpp) supports nested item refs inside a folder.
+- [`CNcdNodeContentInfo::InternalizeL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdnodecontentinfoimpl.cpp) expects `downloadableContent` **metadata**, but that descriptor need not establish an actual download URL.
+
+**Proposal only, not implemented:** retain the v0.13 configuration, two root folders, and strict one-shot allowlisting. Mark one folder as having one child, then respond to one separately recognised child-folder browse with a fictional `ItemRef` plus corresponding `ItemData` and minimal zero-byte `downloadableContent` descriptor. Supply **no actual SIS/SISX bytes or package URL**, no GET downloads, no install/purchase calls, and 404 everything else. The extra browse must be precisely identified by URI/namespace and *sanitized* request structure before a 200 response; no blanket 200 to a new hostname or path. Keep stages and outcomes explicit in the audit; test fail-closed behavior on malformed child requests. The user's request to avoid installing does not itself make a real package safe to serve, and even metadata-only nodes may modify writable C: caches.
+
+Do **not** publish a v0.14 package or arm the E7 until this proposal has been reviewed against the actual request shape and host-only tests. Its success criterion is distinguishing “NCD never asked for the child” from “NCD asked, parsed and returned to UI”, not an installable application.

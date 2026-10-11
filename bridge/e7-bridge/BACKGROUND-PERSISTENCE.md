@@ -72,3 +72,7 @@ assertions cannot prove hardware lifecycle behaviour.
 - https://wiki.qt.io/How_to_Handle_the_Red_End_Key_in_a_Qt_Application
 - https://qt.developpez.com/doc/4.7/qapplication/
 - https://qt.developpez.com/doc/4.6-snapshot/qsymbianevent/
+
+## Native compile correction (2026-10-11)
+
+Sanctuary's pinned Qt/GCCE toolchain reached compilation but failed because including `avkon.hrh` also included `AknFontCategory.hrh`, which is unavailable through the existing compiler include paths. The only value the bridge needs is the public AVKON End-key close event number, `KAknUidValueEndKeyCloseEvent = 0x101F87F0` (verified in the historical Symbian public `avkon.hrh`). The phone source now uses `KE7EndKeyCloseEvent = 0x101F87F0u` instead of importing all of `avkon.hrh`; the source regression test was updated accordingly. This avoids modifying system headers or compiler volumes. **A successful native rebuild and on-device End-key test are still required**. Keep the previous signed v0.8.0 SIS for rollback.

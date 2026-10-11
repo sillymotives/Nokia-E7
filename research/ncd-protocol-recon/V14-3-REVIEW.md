@@ -44,3 +44,22 @@ Read `LIVE-V143.md` from the separate ZIP. Optional trial is a single E7 check w
 This is a test of folder initialization, **not** an assertion that the E7 should display the fictional item or finish its check. No v0.14.3 phone-side result exists yet. The existing v0.14.2 active spinner may originate from a separate topology or completion issue.
 
 **PR policy:** keep documentation-only until the owner explicitly asks to change that scope; do not merge or deploy.
+
+## First physical v0.14.3 trial: folder metadata transmitted; E7 remains spinning (2026-10-11)
+
+Owner ran the separately delivered `ncd_folder_metadata_v143.py --arm-once --acknowledge-cache-risk` on Sanctuary, with the handset on the isolated hotspot. **The E7 was still spinning after the one-shot listener ended**, so the sole v0.14.3 folder-data modification **did not resolve the checking spinner**. Owner has **not yet reported the post-cancel directory state for v0.14.3**.
+
+The sanitized host result shows:
+- `configuration_200_attempted=true`, `configuration_response_socket_write_completed=1`, zero write failures.
+- `matching_browse_seen=true`, `browse_response_socket_write_completed=1`, zero write failures.
+- `root_response_includes_offline_root_folder_data=true` and `root_folder_data_count=1`. **These are fixture/server assertions, not a handset parser acknowledgement.**
+- `child_200_with_documented_companions=1`, `child_item_metadata_200_attempted=true`, `child_response_socket_write_completed=1`, zero write failures.
+- `matching_browse_retries_after_one_shot=0`, `configuration_retries_after_one_shot=0`, `child_metadata_attempts_rejected_by_gate=0`, `rejected_post_root_browse_reasons={}`, `other_post_request_count=0`, `wrong_namespace_probe_browse_count=0`, `handler_failures=0`.
+- `configuration_and_child_payloads_unchanged_from_v142=true`, `only_root_browse_xml_changed_from_v142=true`, `unknown_operations_rejected=true`, `server_shutdown_reason=post_child_observation_complete`. Listener closed normally; **no additional HTTP request hit the listener within the bounded observation window**. This does not establish that the phone did not try other destinations or protocols outside this listener/window.
+- `no_client_parse_ack=true`, `does_not_establish_update_service_success_or_phone_cache_safety=true`.
+
+**Interpretation:** The host's stage-2 FolderData payload was delivered, and the stage-3 matcher continued to accept the Nokia request. This falsifies the narrow claim that *missing root FolderData alone explains the persistent checking spinner*. It does **not** disprove a separate effect on post-cancel item visibility; that outcome hasn't been observed in this trial. Do **not** infer from socket completion that any XML was parsed or persisted to the private E7 cache.
+
+**System-level next boundary:** The historical [`CIAUpdateLoader::OperationComplete`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateloader.cpp) starts follow-up loading work via `NextLoadLoopL`, then invokes `LoadComplete` only when `iOperations.Count() == 0`. An unfinished internal operation, parsing failure or request to another destination is still plausible, but **none established**. The source predates Belle and is not a client runtime trace.
+
+**Conservative next evidence collection:** Do **not** arm v0.14.3 again. While the E7 is still spinning, a brief **passive packet-metadata-only** capture on the isolated hotspot (no XML reply, no connection stimulus) can discriminate additional network activity versus local-only waiting; protect any public endpoints/IPs before sharing. After that, exit Software Update normally once and note whether the directory is blank, displays the fictional item, or shows an error. No cache clearing, factory reset, real package, forged installation URL or broad-response implementation. Avoid a v0.14.4 until the completion path is better understood.

@@ -1,3 +1,10 @@
+> **v0.8.3 background return candidate (not yet hardware verified):**
+> On the Nokia E7, v0.8.2 could keep its authenticated TCP session alive
+> after **Background**, but its minimized Qt window could become impossible
+> to reopen. v0.8.3 tries lowering the native Symbian window group instead
+> of minimizing it. Preserve your existing working SIS; build/test/install
+> only after closing the running bridge. See [BACKGROUND-RETURN.md](BACKGROUND-RETURN.md).
+>
 ## E7 phone background-session persistence (v0.8.2 candidate)
 
 This archive contains the **v0.8.2 phone agent** (not yet verified on real

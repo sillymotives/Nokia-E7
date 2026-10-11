@@ -12,7 +12,7 @@ symbian {
     TARGET.CAPABILITY = NetworkServices ReadUserData WriteUserData
     # WriteUserData permits E: user storage staging; not AllFiles/TCB.
     # HAL::Get and RProperty::Get remain read-only.
-    LIBS += -lhal -lsisregistryclient
+    LIBS += -lhal -lsisregistryclient -lcone -lws32
     TARGET.EPOCSTACKSIZE = 0x14000
     TARGET.EPOCHEAPSIZE = 0x20000 0x800000
 

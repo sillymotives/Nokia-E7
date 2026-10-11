@@ -1,4 +1,4 @@
-// E7 Bridge v0.8.2: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.8.3: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, outbound TCP, HMAC authenticated.
 // Host may send signed admin writes to public data storage / package staging.
 // No raw shell, boot service, or firmware modification commands.
@@ -28,6 +28,7 @@
 #ifdef Q_OS_SYMBIAN
 #include <QtGui/QSymbianEvent> // Qt 4.7 native event wrapper
 #include <w32std.h> // TWsEvent from the Symbian Window Server
+#include <coemain.h> // CCoeEnv::RootWin() gives our native window group
 #include <e32base.h> // Symbian native types, including TUint32
 // TFindProcess and TFullName enumerate process names read-only.
 #include <e32property.h> // RProperty::Get; read only
@@ -125,7 +126,7 @@ public:
           adminSequence(0), uploadActive(false), uploadSize(0), uploadReceived(0) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.8.2\nAuthenticated diagnostic + admin link", this);
+            "E7 Bridge v0.8.3\nAuthenticated diagnostic + admin link", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -176,10 +177,22 @@ private slots:
             state->setText("Connect and authenticate before backgrounding.");
             return;
         }
-        // Minimise the WINDOW only. Qt continues processing the authenticated
-        // TCP socket and any host requests in the same main event loop.
+        // Qt 4.7 showMinimized() can leave a Belle window un-restorable
+        // from the native task switcher. On Symbian, send the application
+        // window group behind other apps without setting Qt::WindowMinimized.
+        // Keep the QWidget, event loop and authenticated socket alive.
+#ifdef Q_OS_SYMBIAN
+        CCoeEnv *coe = CCoeEnv::Static();
+        if (!coe) {
+            state->setText("Cannot background: Symbian UI environment unavailable.");
+            return;
+        }
+        state->setText("Connected in background. Hold Menu and select E7 Bridge to return.");
+        coe->RootWin().SetOrdinalPosition(-1);
+#else
         state->setText("Connected in background. Return via task switcher; Exit to stop.");
         showMinimized();
+#endif
     }
     void exitBridge() {
         // Deliberate owner exit, unlike a focus change or Symbian End key.
@@ -378,7 +391,7 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.8.2");
+                     "; E7 Bridge v0.8.3");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }

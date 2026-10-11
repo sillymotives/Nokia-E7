@@ -33,3 +33,22 @@ All other fields, metadata records, static names/description, folder information
 The separately delivered ZIP includes `LIVE-V144.md`; verify the SHA256 manifest and run the dry-run/test suite before optional live use. SIM out, mobile data off, isolated Sanctuary hotspot, 1 check only, **explicit cache-risk acknowledgement**. If the spinner remains, stop mutating metadata and investigate the updater completion path rather than adding a package URI or executable bytes.
 
 No claim of native Belle parser acceptance, successful updater completion, safe cache mutation or genuinely installable SIS is made here.
+
+## First physical v0.14.4 run: SISX identity delivered, spinner persists (2026-10-11)
+
+Owner launched `sudo python3 -u ncd_sisx_identity_v144.py --arm-once --acknowledge-cache-risk` on Sanctuary while E7 Software Update checked. Device UI continued spinning after listener closed ("Spinnyboi"). The report confirms all three 200 responses were successfully written to the host socket:
+- `configuration_response_socket_write_completed=1`
+- `browse_response_socket_write_completed=1`; `root_folder_data_count=1`; `root_response_includes_offline_root_folder_data=true`
+- `child_response_socket_write_completed=1`; `child_200_with_documented_companions=1`; `uses_sisx_catalogue_mime_and_test_uid=true`; `only_child_identity_metadata_changed_from_v143=true`
+- `handler_failures=0`, `matching_browse_retries_after_one_shot=0`, `child_metadata_attempts_rejected_by_gate=0`, `rejected_post_root_browse_reasons={}`, `other_post_request_count=0`, `other_preminet_browse_count=0`, zero socket-write errors
+- `server_shutdown_reason=post_child_observation_complete`, `no_client_parse_ack=true`, no package/download URI, no SIS/SISX binaries, all further requests remain HTTP 404.
+
+**Result:** The **SISX MIME and development UID alone did not resolve the spinner**. This is a controlled negative result for that symptom, not an E7-side parse/NCD-cache conclusion. **The post-exit update list after v0.14.4 has not yet been reported**, so do not claim it remained blank in this specific trial. Earlier v0.14.3 remained blank.
+
+### Architectural review instead of another blind payload revision
+
+Historical [`CIAUpdateLoader::OperationComplete`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateloader.cpp) invokes `NextLoadLoopL` after each completed node operation, and only calls `iObserver.LoadComplete(iErrorCode)` once `iOperations.Count() == 0`. A host-side HTTP 200 socket write is two layers earlier and does not prove the parser completed, the node operation finished or the UI callback fired.
+
+Further inspection of [`CNcdLoadNodeOperationImpl::FolderRefL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp) shows a **single nontransparent content source can create several direct root folder children**, while `CIAUpdateLoader::RootExpiredL` checks *child count* equal to two. Thus the prior intuition that one configuration source necessarily means only one root node is **not established**; the host sends two folder refs under the same source. It still does not prove that this represents the intended Arrow-plus-firmware catalogue, or that the Belle implementation behaves identically.
+
+The local v0.14.4 fixture was inspected from the exact previously verified ZIP; it still advertises one nontransparent source, two root FolderRefs, one inert FolderData, one nested ItemRef + ItemData and zero installer/download bytes. **Do not proceed to real dummy SIS bytes, installer routes, unsupported MIME tweaks or a v0.14.5 until there's evidence about the device-side completion path.** Most direct next observation: exit the v0.14.4 spinner normally and note whether the list is blank, has the fictional item or reports an error. A previously reported zero-packet post-child capture had no known-good control, so do not treat it as definitive proof of no other network activity.

@@ -1,3 +1,15 @@
+## E7 phone background-session persistence (v0.8.2 candidate)
+
+This archive contains the **v0.8.2 phone agent** (not yet verified on real
+Nokia hardware) and the already accepted v0.8.1 Sanctuary controller. The
+phone-side update intercepts Symbian's native red End-key close event only
+when an authenticated session is active, adds a **Background** minimise
+button, and provides explicit **Exit Bridge**. There is **no boot autostart**,
+background reconnect or new device permission. See
+[BACKGROUND-PERSISTENCE.md](BACKGROUND-PERSISTENCE.md) for manual native
+upgrade steps and acceptance checks. Sanctuary's standalone v0.9 host remains
+compatible; keep using it rather than downgrading just to build the phone SIS.
+
 # E7 Bridge host v0.8.1: authenticated write batches
 
 Sanctuary's controller can now run deliberate multi-step administration

@@ -28,5 +28,5 @@ except ValueError as exc:
     raise SystemExit('Invalid Sanctuary IPv4 address: '+str(exc))
 PY
 cd -- "$project"
-echo "Sanctuary bridge host v0.8.1 for E7 agent v0.8.0 listening on $bind (enter this IPv4 on E7 if different)."
+echo "Sanctuary bridge host v0.8.1 for E7 agent v0.8.0/v0.8.2 listening on $bind (enter this IPv4 on E7 if different)."
 exec python3 host/e7_bridge.py serve --bind "$bind"

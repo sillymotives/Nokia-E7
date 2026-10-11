@@ -46,6 +46,16 @@ A socket-write completion says only that the host write function returned succes
 
 ## Physical E7 v0.13 outcome (operator report, 2026-10-11)
 
-Operator ran the previously distributed v0.13 two-inert-folder listener and reported: **the server ended normally, while Nokia Software Update was still spinning**. No sanitized v0.13 JSON `RESULT` has yet been supplied, nor a contemporaneous passive traffic count. Do not invent counters or assume a successful parse. This is the same **observable symptom** as the one-folder v0.12 trial: the extra sibling folder **did not resolve** the persistent checking UI in this trial.
+Operator ran the previously distributed v0.13 two-inert-folder listener and reported: **the server ended normally, while Nokia Software Update was still spinning**. The operator has now supplied the sanitized v0.13 `RESULT` counters; **no contemporaneous passive traffic count has been supplied**. Do not invent counters or assume a successful parse. This is the same **observable symptom** as the one-folder v0.12 trial: the extra sibling folder **did not resolve** the persistent checking UI in this trial.
 
 The historical “two root children” heuristic is not the same as two root references served by one synthetic content source. The fact that this variant also spins neither proves nor excludes different gateway topology as a later dependency; it provides no basis for adding a dummy SIS. The immediate diagnostic is a brief **passive-only traffic count while the spinner remains active**; verify that the previously known phone DHCP address and hotspot interface are still correct before interpreting zero packets. A lack of observed traffic during one short window can support, but cannot prove, an internal outstanding callback/cache/operation hypothesis. No further arming or payload mutation is recommended until this boundary is understood.
+
+### Sanitized v0.13 listener outcome (additional owner-provided evidence)
+
+- `configuration_200_attempted=true`, `configuration_response_socket_write_completed=1`, `configuration_response_socket_write_failed=0`.
+- `two_folder_preminet_200_attempted=true`, `folder_preminet_200_attempted=true`, `browse_response_socket_write_completed=1`, `browse_response_socket_write_failed=0`.
+- `preminet_response_contained_two_inert_folders_without_downloads=true`, `preminet_response_contained_one_inert_folder_without_downloads=false`, `empty_preminet_200_attempted=false`.
+- `handler_failures=0`, `other_response_write_failures=0`, `configuration_retries_after_one_shot=0`, `matching_browse_retries_after_one_shot=0`, `other_post_request_count=0`, `other_preminet_browse_count=0`, `preminet_nonbrowse_request_count=0`, `wrong_namespace_probe_browse_count=0`.
+- `server_shutdown_reason=post_browse_observation_complete`; `no_client_parse_ack=true`, `socket_completion_is_not_phone_parse_ack=true`.
+
+**Scope:** This excludes reported host socket-write failures and unmatched requests to the *armed listener during its bounded observation*, but does **not** establish a parsed catalogue, complete update refresh, absence of other network traffic, or cache safety. The E7 UI still spun after shutdown. Next discriminator remains passively observing outbound packets while the spinner is active, on the confirmed phone IP and hotspot interface. No v0.14 payload change is justified yet.

@@ -1,6 +1,6 @@
 # E7 NCD v0.14.5: installed-owner-test-probe metadata-only hypothesis
 
-**11 October 2026. Host-verified candidate only. No handset run has occurred.** This is a **documentation-only GitHub review note**. The independently tested full responder ZIP was delivered to the owner in ChatGPT, **not committed here**, and contains no executable Symbian package, installed app data, private registry inventory, ROM image, personal identifiers, or update/download payload.
+**11 October 2026. Host-verified candidate, followed by ONE owner-operated E7 check. The physical check still spun.** This is a **documentation-only GitHub review note**. The independently tested full responder ZIP was delivered to the owner in ChatGPT, **not committed here**, and contains no executable Symbian package, installed app data, private registry inventory, ROM image, personal identifiers, or update/download payload.
 
 ## Question and evidence
 
@@ -33,6 +33,15 @@ Only one allowed HTTP 200 each for configuration, root, and guarded child metada
 - All **58 inherited Python/XML/documentation files except intentionally extended README** remain byte-for-byte unchanged from the verified v0.14.4 ZIP. Only v0.14.5 source, tests, release notes, live instructions, README and checksum manifest differ.
 - Configuration and root 200 response bytes match v0.14.4; only stage-three 200 body and its required `Content-Length` differ.
 - Child body SHA-256: `ffc79b6ad07ae18b37653f7833135596b3cb40dc503b217e0c1889cc4f14785b`. This is a host byte fingerprint, **not a handset parser ACK**.
+
+
+## Owner's live v0.14.5 result (11 October 2026)
+
+The owner voluntarily executed the same guarded `--arm-once --acknowledge-cache-risk --confirm-probe-identity` command on Sanctuary with the E7. The host log recorded exactly one configuration HTTP 200, one root HTTP 200, and one guarded child HTTP 200, each with `*_response_socket_write_completed=1` and `*_response_socket_write_failed=0`. There were zero non-allowlisted POSTs while observing, zero retries after one-shot, zero handler failures and zero rejected child-envelope attempts. The server disarmed and exited with `server_shutdown_reason=post_child_observation_complete`.
+
+**Handset observation supplied by owner:** the Software Update spinner **remained**. No handset-side parser acknowledgement, NCD final-operation completion, UI callback trace, or post-exit list result was supplied. Do not claim the E7 parsed or accepted the synthetic item or that a matching installed UID was ignored by the client. This is a **negative result for the proposed installed-UID/version-only spinner fix**, not a general diagnosis of Nokia's update system.
+
+**Stop:** no additional live synthetic-catalogue tests under this protocol. Private NCD/IAUpdate cache has no verified rollback, and `socket_write_completed` cannot reveal the missing internal callback. The next defensible investigation is offline Belle loader/controller/UI completion and, someday, a permission-respecting read-only device trace. See [`V14-5-BELLE-LOADER-UI-COMPLETION-AUDIT.md`](V14-5-BELLE-LOADER-UI-COMPLETION-AUDIT.md).
 
 ## Physical-risk and stop gates
 

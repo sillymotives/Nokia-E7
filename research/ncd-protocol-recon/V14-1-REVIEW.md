@@ -43,3 +43,40 @@ No HTTP POST bodies, client-provided values, identifiers, cookies, URLs or reque
 Read `LIVE-V141.md` from the separate ZIP. Use the isolated Sanctuary hotspot, E7 without SIM and mobile data off; verify the E7 source IP and DNS still match. Only then consider `sudo python3 -u ncd_browse_diagnostic_v141.py --arm-once --acknowledge-cache-risk`. The owner alone elects whether to accept cache risk. Perform **one check only**. Stop the test on unexpected conditions and supply only the sanitized `RESULT` and UI text.
 
 The only intended diagnostic outcome is identifying how the *second browse* differs, if at all, from the root request. No new 200 responses and no phone-side cache recovery are part of this version.
+
+## First physical v0.14.1 result: metadata browse blocked by an over-strict shape gate
+
+**E7 operator report (2026-10-11):** The device was back to a persistent checking spinner. Configuration HTTP 200 and initial root browse HTTP 200 were each transmitted with completed host-side socket writes. One **additional, different** browse reached the listener, received HTTP **404** and was diagnosed. No synthetic child item metadata was served. The limited run ended with `server_shutdown_reason=child_window_expired` and no handler/diagnostic failures.
+
+Sanitized first-vs-second request comparison:
+
+| Feature | First accepted root browse | Second rejected browse |
+| --- | --- | --- |
+| `entity_id_class` | `offline_root` | `offline_root` |
+| `include_metadata` | `true` | `false` |
+| `metadata_depth` | `zero` | `one` |
+| `metadata_per_level` | `one` | `one` |
+| `page_size` | `one` | `greater_than_one` |
+| `page_start` | `zero` | `zero` |
+| `structure_depth` | `one` | `one` |
+| `request_other_direct_operations` | `true` | `true` |
+
+The second browse has `expected_filter_keys_only=true`, `filter_children=none`, `entity_has_children=false`, `entity_unknown_attributes=false`, `entity_timestamp_present=false`, `browse_unexpected_attributes=false`, `browse_unexpected_children=false`, `filter_count=one`, `parse_status=recognized_browse`, `same_sanitized_shape_as_first_root=false`, `byte_identical_to_first_root=false`, and `matches_v14_exact_child_gate=false`. `additional_browse_observation_count=1`. The diagnostic contains no raw request or identifier.
+
+### Identified host-side incompatibility
+
+**Source inspection** of the archived v0.14 `is_child_metadata_request` confirms it unconditionally refuses any parsed request-root where `len(r) != 1` or the sole child isn't `browse`. The E7's second request has `request_other_direct_operations=true`, proving another direct element is present, so that guard alone suffices to reject the exact observed request. The `page_size=greater_than_one` value is **not, by itself, proof of a second mismatch**: the v0.14 gate accepts integers 1 through 100, but the sanitized class does not disclose whether the observed value exceeds 100.
+
+Historical Nokia source corroborates normal additional root elements:
+
+- [`CNcdRequestBase::CreateRequestL()`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncdrequestbase.cpp) appends optional **configuration, cookies, query responses**, and then the `browse` request element.
+- [`CNcdLoadNodeOperationImpl::CreateRequestLC()`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp) gives the folder's metadata ID, `includeMetaData=false`, `metadataDepth=1` for the child metadata load.
+- [`CNcdRequestBrowseSearch::CreateRequestL()`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncdrequestbrowsesearch.cpp) writes response-filter properties matching the handset's observed child-browse shape.
+
+Minimal **host-only reproduction**, no product-code change: an otherwise valid child request with `pageSize=2` yields `is_child_metadata_request=True`; prepending one benign `configuration` root element yields `False`, even while `v09.request_kind` classifies it as `preminet_matching_browse`. This reproduces the type of rejection without assuming which *actual* extra element(s) the E7 sent.
+
+**Consequence:** Current evidence identifies a real v0.14 protocol gate too strict for Nokia-originated browses. It does NOT prove that sending the fictional child 200 will cause the UI to finish or that the private cache is healthy. No physical v0.14.2 experiment yet.
+
+**Safest next design:** a bounded v0.14.2 matcher that accepts a single valid offline-root metadata `browse` with only **historically documented, explicit, harmless** companion request elements and refuses unrelated or active operation types, plus a fixed limited page-size policy justified by the browser. Continue one-shot 200 and fixed unchanged inert XML. Red/green host tests first, preserving existing v0.14.1 as baseline. Because the diagnostic does not reveal the companion element types, the live matcher must fail closed on unknown tags, log only a safe category of why it rejected, and never print client values/IDs or send active software.
+
+No cache reset, package bytes, installer, firmware, unconstrained POST handling, uncontrolled retries or deployment recommended.

@@ -16,10 +16,11 @@ class SymbianBackgroundPersistence(unittest.TestCase):
     def test_native_symbian_filter_only_compiled_on_symbian(self):
         self.assertIn('#include <QtGui/QSymbianEvent>', CPP)
         self.assertIn('#include <w32std.h>', CPP)
-        self.assertIn('#include <avkon.hrh>', CPP)
+        self.assertNotIn('#include <avkon.hrh>', CPP)
+        self.assertIn('static const TUint32 KE7EndKeyCloseEvent = 0x101F87F0u;', CPP)
         self.assertRegex(CPP, r'#ifdef Q_OS_SYMBIAN\s+protected:\s+virtual bool symbianEventFilter\(')
         self.assertIn('QSymbianEvent::WindowServerEvent', CPP)
-        self.assertIn('KAknUidValueEndKeyCloseEvent', CPP)
+        self.assertIn('event->windowServerEvent()->Type() == KE7EndKeyCloseEvent', CPP)
         self.assertIn('return QApplication::symbianEventFilter(event);', CPP)
 
     def test_only_authenticated_session_activates_native_intercept(self):

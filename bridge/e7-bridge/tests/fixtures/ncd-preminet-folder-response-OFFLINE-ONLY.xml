@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OFFLINE ONLY: fake FolderRef, potentially state-changing if transmitted. -->
+<preminetResponse xmlns="http://nokia.com/preminet/protocol/v/2/0"
+    namespace="urn:e7-lab:synthetic-catalogue" version="2.0">
+  <entity type="FolderRef" id="offline-folder" count="0" />
+</preminetResponse>

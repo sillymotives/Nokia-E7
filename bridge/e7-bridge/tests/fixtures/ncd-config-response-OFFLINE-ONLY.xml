@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic historical NCD response shape. OFFLINE ONLY.
+  NEVER SEND THIS TO A NOKIA, CONNECT A SERVER, OR SERVE UPDATES FROM IT.
+  .invalid is a reserved nonresolving hostname.
+-->
+<configurationResponse
+    xmlns="http://nokia.com/preminet/protocol/configuration/v/1/0"
+    version="1.0"
+    expirationDelta="0">
+  <clientConfiguration configurationExpirationDelta="0">
+    <details>
+      <detail id="contentSources">
+        <detail id="namespace" value="urn:e7-lab:synthetic-catalogue">
+          <detail id="uri" value="http://catalogue.invalid/ncd" />
+          <content key="provider" value="offline-fixture" />
+          <content key="id" value="offline-root" />
+          <content key="alwaysVisible" value="false" />
+          <content key="transparent" value="false" />
+        </detail>
+      </detail>
+    </details>
+  </clientConfiguration>
+</configurationResponse>

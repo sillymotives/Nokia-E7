@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OFFLINE ONLY: syntactic response envelope, not an authentic Nokia response. -->
+<preminetResponse xmlns="http://nokia.com/preminet/protocol/v/2/0"
+    namespace="urn:e7-lab:synthetic-catalogue" version="2.0" />

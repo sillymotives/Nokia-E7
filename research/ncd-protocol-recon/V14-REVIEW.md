@@ -45,3 +45,19 @@ The **16 new tests failed against the v0.13 baseline**, then passed after v0.14 
 A fictitious catalogue entry might write protected private NCD/IAUpdate cache data on the E7's C: drive, **without an independently verified restore/rollback**. Z: and mass-memory copies do not solve that gap. The owner alone operates the hotspot and decides whether to run one optional physical test with `--acknowledge-cache-risk`; **this PR is not permission to install or execute software**.
 
 The first useful observation is **whether the E7 makes the third, exact child-metadata browse at all**. A third server write only confirms host transmission. A visible entry would be useful evidence of catalogue traversal, but does not establish eligibility, client integrity or installation. A blank list/spinner/error should be recorded, not met with repeated random payload changes. Never publish raw phone request bodies, identifiers or unsanitized packet dumps.
+
+## First attempted live v0.14 run after SIM reboot (owner-reported, 2026-10-11)
+
+The user inserted a SIM and the E7 restarted and registered on a mobile network, then began displaying **"Unable to check for updates"**. The E7 successfully loaded a separate harmless HTTP test page served from Sanctuary at `http://10.42.0.1:8765/`, demonstrating at least basic WLAN/IP reachability, **not** confirming Nokia update-host DNS or application connection choice. The HTTP test server's source-IP log has **not** yet been provided.
+
+The owner then ran `sudo python3 -u ncd_metadata_probe_v14.py --arm-once --acknowledge-cache-risk`, saw `ARMED`, manually stopped with `Ctrl+C`, and supplied the full sanitized result. Key counts:
+
+- `configuration_200_attempted=false`, `configuration_response_socket_write_completed=0`
+- `matching_browse_seen=false`, `browse_response_socket_write_completed=0`
+- `child_item_metadata_200_attempted=false`, `child_response_socket_write_completed=0`
+- `other_post_request_count=0`, `wrong_namespace_probe_browse_count=0`, `other_preminet_browse_count=0`, `handler_failures=0`, `configuration_retries_after_one_shot=0`
+- `server_shutdown_reason=operator_stopped`
+
+Source inspection of `V14Handler.do_POST` confirms that unmatched inbound POSTs reaching this listener increment `other_post_requests`, so **no HTTP POST requests were observed at the listener during the armed interval**. No synthetic v0.14 configuration, catalogue, or fictional application metadata was delivered in this run. The result cannot diagnose existing private cache state from earlier physical trials; it does not show that v0.14 harmed cache on this run.
+
+**Next investigation, without rearming the NCD responder:** confirm the handset's current private IP using the successful browser test log, the hotspot's active interface/IP and port-53 DNS forwarding/override for `arrowcdb.ncd.nokia.com`, and whether Software Update's connection destination is WLAN rather than the cellular access point. The responder hard-codes expected E7 source IP `10.42.0.85`, binding IP `10.42.0.1` and port 80. Preserve private cache state, don't factory reset or guess XML changes. Passive captures must distinguish no relevant traffic from a wrong capture filter/interface and must not disclose private phone identifiers.

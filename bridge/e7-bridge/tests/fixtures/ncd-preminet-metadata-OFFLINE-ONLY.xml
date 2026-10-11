@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OFFLINE ONLY: synthetic Preminet 2.0 metadata shape, never observed on E7.
+  NOT an authentic Nokia catalogue, NOT an installable package, and NOT safe
+  to serve to a phone. All entity identities are invented placeholders.
+-->
+<preminetResponse xmlns="http://nokia.com/preminet/protocol/v/2/0"
+    namespace="urn:e7-lab:synthetic-catalogue" version="2.0">
+  <embeddedData>
+    <entities>
+      <dataEntity type="FolderData" id="offline-folder">
+        <name>Offline folder</name>
+        <description>Static parser reconstruction only.</description>
+      </dataEntity>
+      <dataEntity type="ItemData" id="offline-item">
+        <name>Offline metadata item</name>
+        <description>No package, download, or install operation exists.</description>
+        <downloadableContent id="offline-nonpackage" version="0.0.0"
+            size="0" mime="application/octet-stream" />
+        <details>
+          <detail id="iaimportance" value="normal" />
+          <detail id="iatype" value="SA" />
+        </details>
+      </dataEntity>
+    </entities>
+  </embeddedData>
+</preminetResponse>

@@ -148,3 +148,48 @@ state or trigger network lookups if served**. Keep the laboratory endpoint
 returning HTTP 404 until there is a separately agreed, reversible live
 test. No updates, signing-policy changes, redirects, or client actions
 were performed in this stage.
+
+## Offline metadata-stage reconstruction (v0.5)
+
+**Owner verified v0.4:** All 22 standalone tests passed on Sanctuary.
+The synthetic browse request was reported as one `browse`, one entity and
+one response filter. The synthetic folder reply was reported as one
+`FolderRef`. No on-device response was attempted.
+
+Subsequent source tracing identified richer metadata in the Preminet
+response's `embeddedData` child:
+- [Embedded-data parser](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_embeddeddata.cpp):
+  routes `dataEntity` and `actionEntity` to the data-entity parser.
+- [Data-entity parser](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_dataentity.cpp):
+  distinguishes `FolderData` and `ItemData` and handles `name`,
+  `description`, `downloadableContent` and `details`.
+- [Content metadata parser](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_dataentitycontent.cpp):
+  reads `mime`, `id`, `size` and `version` attributes.
+- [IAUpdate protocol constants](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/inc/iaupdateprotocolconsts.h):
+  interprets `iaimportance`, `iatype`, `iasearchcriteria`,
+  `iadependencies`, firmware version keys and reboot flags, plus
+  distinctive service-pack/FOTA/widget MIME types.
+- [IAUpdate node factory](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodefactory.cpp):
+  uses content info MIME to distinguish firmware and service-pack nodes.
+
+The synthetic metadata fixture, at
+[**ncd-preminet-metadata-OFFLINE-ONLY.xml**](../bridge/e7-bridge/tests/fixtures/ncd-preminet-metadata-OFFLINE-ONLY.xml),
+contains a fake `FolderData`, a fake `ItemData`, **zero-byte**
+`downloadableContent` metadata, and purely illustrative
+`iaimportance=normal`, `iatype=SA`. There is **no URI, SIS, update
+payload, purchase, redirect or executable action**.
+Eight [standalone static tests](../bridge/e7-bridge/tests/test_ncd_preminet_metadata_fixture.py)
+check this GitHub fixture's shape and privacy constraints.
+
+The accompanying standalone v0.5 privacy-preserving inspector recognizes
+this metadata without echoing arbitrary names, IDs, URI values or contents.
+**32 standalone tests passed in the assistant's offline container**
+(including the previous 22 tests plus 10 new metadata/privacy cases).
+It was separately regression-tested against the original private E7
+configuration request. That private request is **not** in the ZIP/repo.
+
+As before, all reported classifications concern **historical source
+syntax and local fixtures**, not authenticated modern server traffic or
+Belle IAUpdate 2.2.0 acceptance. In particular,
+`downloadableContent` XML metadata **does not prove a downloadable or
+installable package exists**. Do not serve any fixtures to the real phone.

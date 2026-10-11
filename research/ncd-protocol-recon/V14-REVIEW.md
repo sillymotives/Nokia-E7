@@ -61,3 +61,19 @@ The owner then ran `sudo python3 -u ncd_metadata_probe_v14.py --arm-once --ackno
 Source inspection of `V14Handler.do_POST` confirms that unmatched inbound POSTs reaching this listener increment `other_post_requests`, so **no HTTP POST requests were observed at the listener during the armed interval**. No synthetic v0.14 configuration, catalogue, or fictional application metadata was delivered in this run. The result cannot diagnose existing private cache state from earlier physical trials; it does not show that v0.14 harmed cache on this run.
 
 **Next investigation, without rearming the NCD responder:** confirm the handset's current private IP using the successful browser test log, the hotspot's active interface/IP and port-53 DNS forwarding/override for `arrowcdb.ncd.nokia.com`, and whether Software Update's connection destination is WLAN rather than the cellular access point. The responder hard-codes expected E7 source IP `10.42.0.85`, binding IP `10.42.0.1` and port 80. Preserve private cache state, don't factory reset or guess XML changes. Passive captures must distinguish no relevant traffic from a wrong capture filter/interface and must not disclose private phone identifiers.
+
+## Second physical v0.14 attempt without SIM (operator report, 2026-10-11)
+
+The operator powered down/removed the SIM and returned to a Wi-Fi-only experiment. Unlike the earlier *with-SIM* run, the E7 once again sent requests to Sanctuary. Independent browser proof had previously shown hotspot source IP `10.42.0.85`, Nokia hostname `arrowcdb.ncd.nokia.com` mapped to `10.42.0.1`, and port 80 reachable. Removal coincided with a reboot, so this contrast does not isolate the SIM itself from connection settings or fresh process state.
+
+The operator says “Unable to check for updates” appears immediately. The latest sanitized v0.14 RESULT and events:
+
+- `configuration_200_attempted=true`, `configuration_response_socket_write_completed=1`
+- `matching_browse_seen=true`, `browse_response_socket_write_completed=1`, `two_folder_preminet_200_attempted=true`
+- **One additional matching endpoint/namespace browse was rejected with HTTP 404:** `matching_browse_retries_after_one_shot=1`. Host log text: `OBSERVED: extra/mismatched root browse; HTTP 404.`
+- `child_item_metadata_200_attempted=false`, `child_response_socket_write_completed=0`, `child_metadata_attempts_rejected_by_gate=0`
+- `handler_failures=0`, `wrong_namespace_probe_browse_count=0`, `other_post_request_count=0`, `server_shutdown_reason=operator_stopped`.
+
+**Interpretation correction, source-inspected:** In `ncd_metadata_probe_v14.py` `V14Handler.do_POST`, `matching_browse_retries_after_one_shot` increments whenever `v09.request_kind` returns `preminet_matching_browse`, `is_child_metadata_request(body)` is false, and the root one-shot gate is already consumed. `v09.request_kind` validates path/namespace/operation but does **not** verify an exact root `entity id` or `responseFilter`. Thus the counter DOES NOT establish a byte-for-byte retry. It may be a legitimate second-stage browse whose filter/id differs from our strict expected child metadata format. Our intentional 404 may itself be contributing to the immediate updater failure. The fabricated item metadata has *not* been served.
+
+**Next step:** preserve the two-stage response fixtures. Before more live writes or broadening the 200 whitelist, create a privacy-preserving diagnostic which classifies the rejected browse by local structural features only (root/other entity ID category, `includeMetaData` presence/value, responseFilter names/presence, pageStart, metadataDepth, permitted ranges, repeated-shape equality), without printing any device identifiers, raw XML, SIM info, cookies or full URLs. Test the diagnostics host-only first. Use one bounded live run if the owner elects to continue with private-cache risk. Do not assume cache corruption or alter the payload based only on these counters.

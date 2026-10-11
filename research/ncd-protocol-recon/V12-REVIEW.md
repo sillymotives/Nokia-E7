@@ -1,6 +1,6 @@
 # Nokia E7 NCD: v0.12 inert-root-folder experiment
 
-**Status: offline and localhost verified; physical handset NOT yet tested.** This branch is a review note, not a deployed update service. The complete source ZIP was produced separately in the owner's ChatGPT conversation and has SHA256:
+**Status: offline and localhost verified; physical one-shot E7 test has now been reported (UI stayed on checking screen).** This branch is a review note, not a deployed update service. The complete source ZIP was produced separately in the owner's ChatGPT conversation and has SHA256:
 
 `54e6df1199314a9841af884226b2dbdc2d762aabeb92443aaa57a41802d4146c`
 
@@ -45,3 +45,13 @@ The independently created v0.12 ZIP was extracted into a clean directory and ver
 All original one-shot limits remain: at most one synthetic configuration 200 followed by one matching Preminet 200, 404 to all other requests, same bound 90/45/15-second windows. A new sanitized `matching_browse_retries_after_one_shot` counter can indicate a repeated browse. A subsequent request that gets 404 could indicate a deeper client stage; it does **not** imply success. A persistent error screen alone is ambiguous.
 
 Protected writable `C:` NCD/IAUpdate data still lacks a verified backup and restoration route. `Z:` ROM and mass-memory captures do not protect it. **No phone-side rollback exists.** Do not publish raw E7 request bodies, identifiers, packet captures or cache contents. No wider catalogue, download, firmware, modification of phone OS or subsequent live trial is authorized by this documentation.
+
+## Physical v0.12 observation (owner-reported, 2026-10-11)
+
+The E7 was given the original v0.9 configuration and a single `offline-root` `FolderRef` (`count=0`) on a private lab hotspot. The operator reported a **changed UI outcome:** Software Update **remained on the "Checking for improvements" screen** rather than immediately showing the same failure as v0.10/v0.11. The precise duration and eventual outcome have not yet been measured. This is evidence that the folder variant affects observable behaviour, **not proof** the handset accepted or cached it.
+
+Sanitized listener results: `configuration_response_socket_write_completed=1`, `browse_response_socket_write_completed=1`; zero write failures, zero handler failures, zero matching-browse retries and zero other counted browse/POST requests **at this listener**. `server_shutdown_reason=post_browse_observation_complete`. The probe observes **15 seconds after the matching browse** by default; it cannot see later attempts after exiting, another server's traffic, device-side parse errors, or its private database.
+
+The historical [IAUpdate loader](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateloader.cpp) chains root loading to container/child handling, and [NCD load-node operation](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp) separately receives the HTTP body, completes the XML parse, and advances its operation. A completed server socket write alone cannot distinguish a waiting client, broken parser/callback, cache operation, or external follow-up connection.
+
+**Next action should be observation, not adding an installable SIS.** First determine whether the spinner remains after the listener shuts down, the elapsed time, and whether the E7 makes follow-up DNS/TCP requests to *any* destination during the spinner (locally inspect or sanitize packet metadata; never publish raw captures). Then consider a deliberately bounded second-stage catalogue response or metadata-only item **if actual follow-up evidence warrants one**. A dummy `.sis` is a new installation/signature/trust risk and does not diagnose why a catalogue query has failed to complete. No additional live trial is authorised by this note.

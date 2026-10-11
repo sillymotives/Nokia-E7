@@ -103,3 +103,48 @@ reversible protocol-response experiment is designed.
 Belle IAUpdate 2.2.0 matches the older 2.1.0 source, the actual catalogue
 addressing conventions, the subsequent Preminet browse request and any
 firmware-package policy.
+
+## Offline Preminet 2.0 browse-stage reconstruction (v0.4)
+
+**User verification:** the standalone v0.3 package completed 11 unit
+tests, and its offline synthetic `configurationResponse` produced one
+candidate content source with no actions, cookies, or errors.
+**This is not evidence that Belle accepted a server response.**
+
+Source tracing now identifies a distinct follow-on protocol:
+
+- [Preminet request constants](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/inc/ncdrequestconstants.h):
+  `http://nokia.com/preminet/protocol/v/2/0`, version `2.0`.
+- [Browse request generator](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncdrequestbrowsesearch.cpp):
+  `preminetRequest` with `browse`, optional `entity` references, and
+  `responseFilter` / `entityFilter`.
+- [Content-source node operation](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp):
+  for an ordinary, nontransparent content source, sets
+  `pageSize=1`, `pageStart=0`, `structureDepth=1`,
+  `metadataDepth=0`, `metadataPerLevel=1`.
+- [Preminet response parser](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_response.cpp):
+  `preminetResponse` recognizes immediate `entity`, `embeddedData`,
+  `purchase`, `subscriptionReport`, `information`, `error`.
+- [Entity reference parser](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/protocol/src/ncd_parser_pp_entityref.cpp):
+  interprets `FolderRef`, `ItemRef` and `ActionRef`.
+
+Three **offline-only synthetic fixtures** and seven independent static
+tests now live alongside the configuration fixture:
+
+- [Browse](../bridge/e7-bridge/tests/fixtures/ncd-preminet-browse-OFFLINE-ONLY.xml)
+- [Empty response](../bridge/e7-bridge/tests/fixtures/ncd-preminet-empty-response-OFFLINE-ONLY.xml)
+- [Folder reference response](../bridge/e7-bridge/tests/fixtures/ncd-preminet-folder-response-OFFLINE-ONLY.xml)
+- [Tests](../bridge/e7-bridge/tests/test_ncd_preminet_fixture.py)
+
+A self-contained v0.4 downloadable lab package also extends the
+privacy-preserving inspector to recognize both NCD Configuration 1.0 and
+Preminet 2.0 documents. It has **22 passing tests in the assistant's
+offline container**, including regressions protecting against disclosure
+through invented element names. No real E7 Preminet traffic has yet been
+seen, and no response has been served to the E7.
+
+The fake folder and content-source data **would potentially modify client
+state or trigger network lookups if served**. Keep the laboratory endpoint
+returning HTTP 404 until there is a separately agreed, reversible live
+test. No updates, signing-policy changes, redirects, or client actions
+were performed in this stage.

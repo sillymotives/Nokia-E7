@@ -71,3 +71,35 @@ rules, create static privacy-safe fixtures, test them offline, then plan an
 explicitly approved, reversible isolated-network experiment. Do not
 enable automatic updates, issue redirects, offer SIS packages, modify FOTA or
 change installer certificate checks.
+
+## Offline fixture milestone (2026-10-11, v0.3)
+
+The v0.2 privacy-preserving request/response-shape inspector completed all
+six local unit tests and correctly summarized the owner's E7 request without
+printing sensitive values. The v0.3 standalone offline lab package retains
+the same inspector, adds a source-backed synthetic `contentSources` tree,
+and passes **11 local standard-library unit tests**.
+
+The canonical, synthetic fixture and its independent static tests are now
+in this draft branch:
+
+- [Fixture: ncd-config-response-OFFLINE-ONLY.xml](../bridge/e7-bridge/tests/fixtures/ncd-config-response-OFFLINE-ONLY.xml)
+- [Fixture tests](../bridge/e7-bridge/tests/test_ncd_response_fixture.py)
+
+The nested structure follows
+`configurationResponse/clientConfiguration/details/detail[id=contentSources]/detail[id=namespace]/detail[id=uri]`,
+with parser-defined `content` pairs (`provider`, `id`,
+`alwaysVisible`, `transparent`). The catalogue hostname is deliberately
+`catalogue.invalid`. It contains **no raw device identifiers**, server
+actions, cookies or package payloads.
+
+`candidate_source_entries = 1` is only a static source-shape result.
+Even this seemingly inert fixture would be **potentially state-changing if
+served to a real client**. **Do not serve it to the Nokia.** The local HTTP
+404 remains the safe baseline until a separate, explicitly approved,
+reversible protocol-response experiment is designed.
+
+**Remaining uncertainties:** Nokia's authentic server response, whether
+Belle IAUpdate 2.2.0 matches the older 2.1.0 source, the actual catalogue
+addressing conventions, the subsequent Preminet browse request and any
+firmware-package policy.

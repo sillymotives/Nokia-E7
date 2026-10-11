@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OFFLINE ONLY: source-derived Preminet 2.0 browse shape.
+     Fake metadata id, never send to a real Nokia. -->
+<preminetRequest xmlns="http://nokia.com/preminet/protocol/v/2/0"
+    xmlns:cp="http://nokia.com/preminet/protocol/configuration/v/1/0"
+    namespace="urn:e7-lab:synthetic-catalogue" version="2.0">
+  <browse>
+    <entity id="offline-root" includeMetaData="true" />
+    <responseFilter pageSize="1" pageStart="0" structureDepth="1"
+                    metadataDepth="0" metadataPerLevel="1" />
+  </browse>
+</preminetRequest>

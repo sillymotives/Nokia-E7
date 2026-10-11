@@ -1,4 +1,4 @@
-// E7 Bridge v0.8.0: native Qt 4.7.4 agent for Nokia Belle.
+// E7 Bridge v0.8.2: native Qt 4.7.4 agent for Nokia Belle.
 // Manually launched, outbound TCP, HMAC authenticated.
 // Host may send signed admin writes to public data storage / package staging.
 // No raw shell, boot service, or firmware modification commands.
@@ -10,6 +10,7 @@
 #include <QtGui/QCheckBox>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QVBoxLayout>
+#include <QtGui/QHBoxLayout>
 #include <QtGui/QFormLayout>
 #include <QtNetwork/QTcpSocket>
 #include <QtNetwork/QHostAddress>
@@ -25,6 +26,9 @@
 #include <QtCore/QRegExp>
 #include <QtCore/QStringList>
 #ifdef Q_OS_SYMBIAN
+#include <QtGui/QSymbianEvent> // Qt 4.7 native event wrapper
+#include <w32std.h> // TWsEvent from the Symbian Window Server
+#include <avkon.hrh> // KAknUidValueEndKeyCloseEvent (End key)
 #include <e32base.h> // TFindProcess and TFullName enumerate process names read-only
 #include <e32property.h> // RProperty::Get; read only
 #include <hal.h> // HAL::Get; read only
@@ -78,16 +82,46 @@ static bool resolvedPath(const QString &requested, QString *resolved) {
     return true;
 }
 
+// The red End key is a native AVKON close message, NOT a normal Qt keypress.
+// By default it exits a Qt GUI. Intercept only while our owner explicitly
+// connected and authenticated this session; never create a boot daemon.
+class E7BridgeApplication : public QApplication {
+public:
+    E7BridgeApplication(int &argc, char **argv)
+        : QApplication(argc, argv), preserveConnectedSession(false) {}
+
+    void setPreserveConnectedSession(bool enabled) {
+        preserveConnectedSession = enabled;
+    }
+
+#ifdef Q_OS_SYMBIAN
+protected:
+    virtual bool symbianEventFilter(const QSymbianEvent *event) {
+        if (preserveConnectedSession && event &&
+            event->type() == QSymbianEvent::WindowServerEvent &&
+            event->windowServerEvent() &&
+            event->windowServerEvent()->Type() == KAknUidValueEndKeyCloseEvent) {
+            // Symbian still foregrounds its native Phone UI. Do not close
+            // the Qt event loop, TCP socket, or running bridge process.
+            return true;
+        }
+        return QApplication::symbianEventFilter(event);
+    }
+#endif
+private:
+    bool preserveConnectedSession;
+};
+
 class E7Bridge : public QWidget {
     Q_OBJECT
 public:
-    E7Bridge(QWidget *parent = 0)
-        : QWidget(parent), socket(new QTcpSocket(this)), session(0),
+    E7Bridge(E7BridgeApplication *app, QWidget *parent = 0)
+        : QWidget(parent), bridgeApp(app), socket(new QTcpSocket(this)), session(0),
           authenticated(false), awaitingReady(false), wantConnection(false),
           adminSequence(0), uploadActive(false), uploadSize(0), uploadReceived(0) {
         setWindowTitle("E7 Bridge");
         QLabel *intro = new QLabel(
-            "E7 Bridge v0.8.0\nAuthenticated diagnostic + admin link", this);
+            "E7 Bridge v0.8.2\nAuthenticated diagnostic + admin link", this);
         intro->setWordWrap(true);
         server = new QLineEdit(this);
         server->setInputMethodHints(Qt::ImhNoPredictiveText);
@@ -103,7 +137,9 @@ public:
         QPushButton *forgetButton = new QPushButton("Forget saved pairing", this);
         QPushButton *connectButton = new QPushButton("Connect", this);
         QPushButton *disconnectButton = new QPushButton("Disconnect", this);
-        state = new QLabel("Idle; nothing runs in the background.", this);
+        QPushButton *backgroundButton = new QPushButton("Background", this);
+        QPushButton *exitButton = new QPushButton("Exit Bridge", this);
+        state = new QLabel("Idle. Connect manually; no background link yet.", this);
         state->setWordWrap(true);
         QVBoxLayout *layout = new QVBoxLayout(this);
         layout->addWidget(intro);
@@ -112,9 +148,15 @@ public:
         layout->addWidget(forgetButton);
         layout->addWidget(connectButton);
         layout->addWidget(disconnectButton);
+        QHBoxLayout *backgroundActions = new QHBoxLayout();
+        backgroundActions->addWidget(backgroundButton);
+        backgroundActions->addWidget(exitButton);
+        layout->addLayout(backgroundActions);
         layout->addWidget(state);
         connect(connectButton, SIGNAL(clicked()), this, SLOT(startLink()));
         connect(disconnectButton, SIGNAL(clicked()), this, SLOT(stopLink()));
+        connect(backgroundButton, SIGNAL(clicked()), this, SLOT(backgroundNow()));
+        connect(exitButton, SIGNAL(clicked()), this, SLOT(exitBridge()));
         connect(forgetButton, SIGNAL(clicked()), this, SLOT(forgetPairing()));
         connect(remember, SIGNAL(toggled(bool)), this, SLOT(onRememberToggled(bool)));
         connect(socket, SIGNAL(connected()), this, SLOT(onConnected()));
@@ -125,6 +167,21 @@ public:
         restoreSavedPairing(); // Prefill only; NEVER initiate networking at startup.
     }
 private slots:
+    void backgroundNow() {
+        if (!authenticated || socket->state() != QAbstractSocket::ConnectedState) {
+            state->setText("Connect and authenticate before backgrounding.");
+            return;
+        }
+        // Minimise the WINDOW only. Qt continues processing the authenticated
+        // TCP socket and any host requests in the same main event loop.
+        state->setText("Connected in background. Return via task switcher; Exit to stop.");
+        showMinimized();
+    }
+    void exitBridge() {
+        // Deliberate owner exit, unlike a focus change or Symbian End key.
+        stopLink();
+        QApplication::quit();
+    }
     void onRememberToggled(bool enabled) {
         if (enabled) return; // Re-enable saving only after the next successful handshake.
         if (clearSavedPairing())
@@ -195,6 +252,7 @@ private slots:
         abortUpload();
         adminSequence = 0;
         wantConnection = false;
+        bridgeApp->setPreserveConnectedSession(false);
         socket->abort();
         authenticated = false;
         awaitingReady = false;
@@ -213,6 +271,7 @@ private slots:
         abortUpload();
         adminSequence = 0;
         wantConnection = false;
+        bridgeApp->setPreserveConnectedSession(false);
         authenticated = false;
         awaitingReady = false;
         incoming.clear();
@@ -223,6 +282,7 @@ private slots:
     void onSocketError(QAbstractSocket::SocketError) {
         abortUpload();
         wantConnection = false;
+        bridgeApp->setPreserveConnectedSession(false);
         server->setEnabled(true);
         key->setEnabled(true);
         state->setText("Network error: " + socket->errorString());
@@ -230,6 +290,7 @@ private slots:
     void onSessionError(QNetworkSession::SessionError) {
         abortUpload();
         wantConnection = false;
+        bridgeApp->setPreserveConnectedSession(false);
         server->setEnabled(true);
         key->setEnabled(true);
         state->setText("Wi-Fi session failed; connect Wi-Fi in Settings first.");
@@ -272,6 +333,7 @@ private slots:
                 return;
             }
             authenticated = true;
+            bridgeApp->setPreserveConnectedSession(true);
             adminSequence = 0;
             awaitingReady = false;
             key->setEnabled(false);
@@ -284,8 +346,10 @@ private slots:
                     "Authenticated; pairing remembered (private local settings)." :
                     "Authenticated; could not save pairing. Check C: storage.");
             } else {
-                state->setText("Authenticated; pairing not saved (read-only commands).");
+                state->setText("Authenticated; pairing not saved.");
             }
+            state->setText(state->text() +
+                " Use Background/End key; task switcher to return; Exit to stop.");
             return;
         }
         if (!authenticated) {
@@ -310,7 +374,7 @@ private slots:
         if (line == "PING") { sendLine("OK PONG"); return; }
         if (line == "INFO") {
             sendLine("OK Nokia Belle; Qt " + QByteArray(QT_VERSION_STR) +
-                     "; E7 Bridge v0.8.0");
+                     "; E7 Bridge v0.8.2");
             return;
         }
         if (line == "METRICS") { sendMetrics(); return; }
@@ -987,6 +1051,7 @@ private:
         saved.sync();
         return saved.status() == QSettings::NoError;
     }
+    E7BridgeApplication *bridgeApp;
     QLineEdit *server;
     QLineEdit *key;
     QCheckBox *remember;
@@ -1010,8 +1075,8 @@ private:
 };
 
 int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
-    E7Bridge bridge;
+    E7BridgeApplication app(argc, argv);
+    E7Bridge bridge(&app);
     bridge.showMaximized();
     return app.exec();
 }

@@ -1,6 +1,6 @@
 # NCD research: v0.11 root-expiry-only experiment
 
-**Status:** locally implemented and tested; **not yet tested on the physical E7**. This PR is a documentation/experiment review, not a release and not a code deployment.
+**Status:** locally implemented and tested; physical v0.11 owner-reported trial completed with unchanged update error. This PR is a documentation/experiment review, not a release and not a code deployment.
 
 ## Physical baseline
 
@@ -27,3 +27,13 @@ The owner suggested returning something structural instead of an empty catalogue
 The original ROM Z image and mass-memory capture do not restore private writable NCD/IAUpdate caches. Live tests can change internal C: data and no automatic rollback exists; the owner has previously accepted that risk during the separate v0.10 run, but this documentation is not blanket authorization for repeated trials. Public GitHub must not contain raw phone request bodies, identifiers, private file paths, or cached data.
 
 A completed server socket write never proves handset-side receipt, parsing, success or absence of cache damage. If a future physical v0.11 trial again fails, inspect new observations before changing more payload fields.
+
+## Physical v0.11 result (owner-reported; 2026-10-11)
+
+One isolated E7 Software Update attempt was performed using outer root `expirationDelta=5`, unchanged inner `configurationExpirationDelta=0`, and unchanged **empty** v0.9 browse body.
+
+The listener reported `configuration_response_socket_write_completed=1`, `browse_response_socket_write_completed=1`, **zero** write or handler failures and no counted unmatched requests at that listener, then `server_shutdown_reason=post_browse_observation_complete`. The E7 displayed **the same Software Update failure**.
+
+The root-expiry adjustment alone therefore did **not** change the observable UI outcome. The E7 is known to send a matching browse request to the synthetic source. Neither server write completion nor subsequent application error proves successful client parsing. Retire expiry-only as the next phone experiment; do not repeat it unchanged.
+
+**Separate next hypothesis (pending design review):** supply a single root-level `FolderRef` with `id=offline-root`, `count=0` and the same synthetic namespace under the v0.10 baseline configuration with outer expiry **0**, to test whether an empty browse response lacks a required catalogue node. No metadata, remote URL, downloadable file, firmware or install instruction is contemplated. Verify the parser and node association in the historical source, write failing tests, and retain the original one-shot limits before considering any new live test. No writable `C:` recovery has been established.

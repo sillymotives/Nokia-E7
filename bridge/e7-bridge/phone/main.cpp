@@ -28,10 +28,14 @@
 #ifdef Q_OS_SYMBIAN
 #include <QtGui/QSymbianEvent> // Qt 4.7 native event wrapper
 #include <w32std.h> // TWsEvent from the Symbian Window Server
-#include <avkon.hrh> // KAknUidValueEndKeyCloseEvent (End key)
-#include <e32base.h> // TFindProcess and TFullName enumerate process names read-only
+#include <e32base.h> // Symbian native types, including TUint32
+// TFindProcess and TFullName enumerate process names read-only.
 #include <e32property.h> // RProperty::Get; read only
 #include <hal.h> // HAL::Get; read only
+// Symbian^3 public avkon.hrh: KAknUidValueEndKeyCloseEvent = 0x101F87F0.
+// Do not include the entire resource header: the pinned Belle SDK copy pulls
+// in AknFontCategory.hrh, unavailable in the compiler include paths.
+static const TUint32 KE7EndKeyCloseEvent = 0x101F87F0u;
 #include <swi/sisregistrysession.h> // InstalledUidsL/IsInstalledL: ReadUserData
 #include <swi/sisregistryentry.h> // PackageNameL/VersionL: read-only
 #endif
@@ -100,7 +104,7 @@ protected:
         if (preserveConnectedSession && event &&
             event->type() == QSymbianEvent::WindowServerEvent &&
             event->windowServerEvent() &&
-            event->windowServerEvent()->Type() == KAknUidValueEndKeyCloseEvent) {
+            event->windowServerEvent()->Type() == KE7EndKeyCloseEvent) {
             // Symbian still foregrounds its native Phone UI. Do not close
             // the Qt event loop, TCP socket, or running bridge process.
             return true;

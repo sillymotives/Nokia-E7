@@ -193,3 +193,63 @@ syntax and local fixtures**, not authenticated modern server traffic or
 Belle IAUpdate 2.2.0 acceptance. In particular,
 `downloadableContent` XML metadata **does not prove a downloadable or
 installable package exists**. Do not serve any fixtures to the real phone.
+
+## Offline IAUpdate eligibility-gate investigation (v0.6, 2026-10-11)
+
+**User verified v0.5** on Sanctuary: 32 tests passed; the metadata
+fixture reported `FolderData=1`, `ItemData=1`, one synthetic
+`downloadableContent` metadata block and **zero URI attributes**.
+
+Further investigation of the original **IAUpdate 2.1.0** source:
+
+1. [NodeContainer: `AddNodeL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodecontainer.cpp) requires:
+   no duplicate, acceptable platform, installed-state/version check,
+   no degrading embedded dependencies, and a valid package type.
+2. [Platform dependency](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateplatformdependency.cpp):
+   optional `S60` platform name and **inclusive major/minor** bounds;
+   the platform comparison ignores build number.
+3. [`InstallCheckL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodecontainer.cpp):
+   installed version newer than candidate is rejected; equal-version
+   ordinary candidates are retained, but force-hidden for dependency
+   information. MIME-defined service packs are handled separately.
+4. [`PackageTypeAcceptedL` and `ReplaceRecommendedL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodecontainer.cpp):
+   `SA`, MIME-defined service packs and widgets skip the installed-base
+   upgrade requirement. `PU` and `SP` require a **same-UID installed base**
+   satisfying a declared dependency version interval. For matched,
+   accepted ordinary candidates the preferred version is newer; at equal
+   version and when the new leaf-distance is no longer, the packet
+   preference is `PU > SP > SA`. Do **not** conflate `SP` packet type
+   with service-pack MIME `application/x-arrow-metapackage`.
+5. [Recursive dependency resolution](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodecontainer.cpp):
+   installed nodes and eligible candidate nodes can satisfy dependencies;
+   recursive cycles and unsatisfied requirements fail; broken candidates
+   are removed when the head list is built. Bundle/self-update special
+   cases are **not** represented in the toy model.
+6. [Embedded downgrade check](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdatenodedetails.cpp):
+   a newer installed embedded component can block a candidate.
+7. [UI `MarkFilterNodeL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/ui/src/iaupdatenodefilter.cpp):
+   without caller-specific search/UID filters, normal-priority entries
+   are not preselected while non-normal visible entries normally are.
+   **Selection is not eligibility**, and it never establishes that a
+   package is safe or installable. Device-management/FOTA handling is
+   a different conditional path.
+
+For reproducibility, the draft branch now contains a standalone,
+**offline-only fictitious-candidate illustration**
+[`iaupdate_eligibility_recon.py`](../bridge/e7-bridge/tools/iaupdate_eligibility_recon.py)
+and its [unit tests](../bridge/e7-bridge/tests/test_iaupdate_eligibility_recon.py).
+The associated self-contained standalone v0.6 lab bundle carries the
+earlier privacy-preserving NCD/Preminet inspector, 17 invented
+eligibility scenarios and **68 passing tests on a clean extraction**
+(32 older + 36 new). It also passed a local privacy regression against the
+owner's original private configuration request without exposing
+identifying attributes.
+
+**Scope limits:** The simulator does not accept phone data, contact a
+network, serve protocol responses, resolve arbitrary dependency graphs,
+emulate firmware updates, or install anything. Its `hypothetical_head_stage`
+is a reasoned *illustration* of selected historical code paths, not a
+prediction of the physical E7's update list. The actual device reports
+`s60-iaupdate 2.2.0`, while the archived source identifies version
+`2.1.0`. The original private XML remains outside this repository.
+Continue returning HTTP 404 from the lab server.

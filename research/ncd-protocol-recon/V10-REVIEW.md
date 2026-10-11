@@ -1,6 +1,6 @@
 # Nokia E7: NCD protocol recon v0.10 (research review)
 
-**Status: experimental, offline/localhost verified only. Not deployed to an E7.**
+**Status: experimental. Host tests and a one-shot physical v0.10 trial completed; Software Update still failed.**
 
 This independent NCD research package is NOT E7 Bridge v0.9 or v0.10, and is not a phone OS modification.
 
@@ -31,3 +31,19 @@ Do not publish captured request XML, IMEI/IMSI, PCAPs, cache files, or user iden
 Run offline transport/error-path tests first. If and only if the backup gate is met, a separately approved single on-device trial can compare the v0.9 send-attempt counters to sanitized socket-write outcome counters, with exactly the same fixed XML and one-shot allowlist. A continued UI failure after both completed writes is *not* sufficient to identify its cause.
 
 The actual v0.10 source package and its 207 test files were produced and checked independently in the ChatGPT workspace. This GitHub review note **does not contain the full package** and should not be mistaken for a merged or deployed release.
+
+
+## Physical v0.10 acceptance observation (2026-10-11)
+
+Owner-operated test of the same two fixed response bodies, with a known writable-cache recovery gap explicitly accepted by the owner. **This is hardware observation, not a claim that the original backup gate was met.**
+
+- Exactly one configuration and one matching synthetic-namespace Preminet browse were recognised; each got its one permitted HTTP 200.
+- Local HTTP handler finished writing both responses: `configuration_response_socket_write_completed=1`, `browse_response_socket_write_completed=1`.
+- `*_socket_write_failed=0`, `handler_failures=0`, `other_response_write_failures=0`.
+- No counted extra POST, browse or namespace-mismatch request **to this lab listener** during its observation window.
+- `server_shutdown_reason=post_browse_observation_complete`; the listener closed automatically.
+- Operator reports **the same Software Update failure screen**.
+
+**Interpretation:** A deterministic v0.9/v0.10 host-write failure is not supported. The TCP write result is not a device-side body-read or XML-parse acknowledgment. Other DNS/TCP destinations, error propagation, an empty root without folder references, and writable-cache effects are not observable from these counters. The historical root loader creates actual catalogue children when it handles `FolderRefL`; this synthetic response has **none**, so no root catalogue child is introduced by its contents. However, that does not by itself prove the observed UI failure.
+
+**Next diagnostic design, not yet implemented:** examine the E7's original browse operation shape with private values suppressed and assess whether one inert `FolderRef` matching the configured source node identifier is a valid isolated experiment. Independently check whether Software Update talks to any other Nokia hostname/port. Do not change multiple payload or network variables at once. All future phone experiments remain potentially state-changing.

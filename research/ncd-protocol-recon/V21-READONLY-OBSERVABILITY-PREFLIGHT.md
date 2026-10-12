@@ -118,6 +118,28 @@ After the preflight, the owner actually performed **checksum-verified, host-only
 
 **Disposition:** proceed with local static source/binary analysis and host-only deterministic tests. The new Ghidra/LLVM successes reduce *code uncertainty* but do not change the missing **live observability and recovery** requirements. The phone remains frozen from synthetic NCD response trials.
 
+## Host-only C: preservation-candidate inventory (prepared, not run on Sanctuary)
+
+**Source-verified storage risk (new, 12 October 2026):**
+
+- In [NCD provider `CNcdProvider::StartupBeginL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdproviderimpl.cpp#L1062-L1117), Nokia creates a provider startup marker (`ncdstartup`) and conditionally invokes `ClearProviderFilesL` after repeated failed shutdowns, failed startup-file access or a preexisting startup marker. [`CheckDatabaseVersionsL` and `ClearProviderFilesL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdproviderimpl.cpp#L1129-L1265) also have database-version-triggered clearing and removal of client data. This is a **possible writable state loss mechanism** on provider startup, *not evidence that an earlier synthetic response already deleted files*.
+- [NCD configuration manager `SaveDataL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdconfigurationmanagerimpl.cpp#L1030-L1063) stores provider-specific configuration records in a persistent database. [Provider storage constants](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/inc/ncdproviderdefines.h#L57-L95) include DB `Db0`, file extension `.db`, download and namespace identifiers. The actual installed E7 **drive/path and complete set of persisted files remain unverified**; do not assume a guessed `C:\\private\\...` path or suggest touching the active databases.
+- [NCD server `HandleContinueMessage`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdbaseoperation.cpp#L222-L279) and [`CompleteMessage`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdbaseoperation.cpp#L457-L481) further justify capturing an entire trace, not a snapshot of one pointer.
+
+**Prepared independent host-only helper:** `e7_host_recovery_inventory_v1.py`, SHA256 **`8f3fb97db2f5c23026afd7c4a4da6a3ac866121d72fd21413dec42e472c8f7f5`**. Kept **outside GitHub** as a user-downloadable helper to preserve this docs-only PR's scope. It is Python 3 stdlib-only and has no network, device, subprocess or file-content access, and **never writes** in its normal operation. It looks only at existing directory-entry metadata (`os.scandir` and non-following `stat`) under up to eight explicit host roots; refuses symlink roots, does not traverse symlink entries or standard sensitive/system dirs, caps directory traversal at 12,000 entries/root (50,000 upper option limit) and depth 6 (upper 8), and reports only **redacted** filename/paths by default. `--show-paths` deliberately permits *local* detailed output and should not be pasted unredacted to public repos/chats. Classifications are merely **candidate filenames**: Nokia Suite backup formats, firmware packages, ROM dump/archives, named sector images and possible C-tree directories; `SYM.RPKG` and `romdumpplus.dmp` are specifically labelled non-C-recovery evidence rather than approved rollback.
+
+**Local authoring-host verification:** 7/7 deterministic tests passed for common classifications, symlink handling, explicit bounds, no file-content `open()` during scan, default private-name redaction, absent-root handling and C-drive-like directory names. **Not yet executed on the owner's Sanctuary**, therefore the candidate counts, actual C: backup presence, storage completeness, and restorable status are **unknown**. Proposed offline-only Sanctuary command:
+
+```sh
+python3 -B ~/Downloads/e7_host_recovery_inventory_v1.py \\
+  --root "$HOME/Documents/E7 dump" \\
+  --root "$HOME/Downloads"
+```
+
+Optional `--root /OTHER/EXISTING/HOST/BACKUP/FOLDER` may be added when the owner explicitly knows such a folder. Report only the redacted summary initially. A positive candidate is **not proof of full C: backup or a working recovery method**. A negative/incomplete scan is **not proof that no backup exists**. Do not connect or change the E7 during the inventory.
+
+**Remaining blocker after this preparation:** read-only phone-side protected IPC/callback observability. Existing E7 Bridge uses `TFindProcess`, package inventory and limited accessible filesystem listing; it cannot introspect protected NCD server heaps, callbacks or private caches. There is no verified preinstalled safe protected debugger. We cannot validate live `iPendingMessage` or the root-to-child callback solely from on-host HTTP writes. This inventory is **not permission for a new catalogue probe**, debugger installation, C: data edit or firmware flash.
+
 ## Interpretation and next decision
 
 - If **no agent** is found: don't assume one is absent from the phone; the host-side install path is simply unconfirmed.

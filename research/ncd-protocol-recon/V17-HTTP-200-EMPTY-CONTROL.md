@@ -1,6 +1,6 @@
-# E7 NCD v0.17: one-shot HTTP 200, **empty body** control (prepared, not run)
+# E7 NCD v0.17: one-shot HTTP 200, **empty body** control (owner-run)
 
-**12 October 2026. Host-only verified; no E7 experiment conducted.**
+**12 October 2026. One owner-operated E7 test completed, after prior host-only verification.**
 
 ## Evidence that motivates this control
 
@@ -57,6 +57,20 @@ sudo python3 -u e7-http-200-empty-control-v0.17.py --arm-once --acknowledge-cach
 
 Initiate **at most one** ordinary update check after `ARMED`, observe the exact UI behavior and share the **sanitized RESULT**. Because a 200 response may trigger parser/cache actions, **private NCD/IAUpdate state can still change and has no verified rollback**. There is no installable payload.
 
+## Owner's live result (12 October 2026)
+
+The owner ran the optional `--arm-once --acknowledge-cache-risk` command in Sanctuary and reported "**Same result**" directly after the earlier v0.16 run, where the spinner stopped and the ordinary "unable to check for updates" message appeared. This is recorded as **the spinner stopped and the normal failure UI appeared**, based on that conversational comparison, not as a newly captured photograph or exact on-phone quotation.
+
+Sanitized host result independently confirms:
+- `configuration_request_shape_matched=true`.
+- `one_empty_http_200_attempted=true`, `response_body_bytes=0`, and `response_socket_write_completed=true`.
+- `other_requests_discarded_without_http_response=0`; server shutdown reason `one_configuration_200_attempted`.
+- `no_client_parse_ack_or_ui_completion_trace=true`. The result is **not evidence of client XML acceptance**. No XML, catalogue, installer, download URL or payload was sent.
+
+**New discrimination:** both an empty-body HTTP 404 and an empty-body HTTP 200 trigger ordinary visible error completion on the E7. A `200` **status alone is insufficient to reproduce** the earlier nonterminating spinner. The distinguishing variables in v0.14.x are **nonempty configuration XML** and whatever additional network requests or asynchronous operations it starts; root/child catalogue data need not yet be involved. A successful socket write still does not prove phone-side parser completion.
+
+For future work, prefer **one valid/previously used configuration HTTP 200, with all later requests refused or given explicit 404**. Comparing this bounded *configuration-only* test with v0.17 and the three-stage v0.14.5 flow could distinguish configuration parsing/discovery from subsequent browse loading without inventing any new metadata. This is a **proposed** experiment only and requires separate consent and cache-risk acknowledgement; normal updates can mutate private state, with no verified rollback.
+
 ## Interpretation after a physical run, not before
 
 - **Spinner ends in error:** a zero-body HTTP 200 can propagate to normal error completion. The earlier spinner is then more associated with *nonempty XML*, NCD source discovery or child load/IPC processing. It does **not** prove 200-success completion works for valid XML.
@@ -64,4 +78,4 @@ Initiate **at most one** ordinary update check after `ARMED`, observe the exact 
 - **No match / no 200 write:** inconclusive on phone-side behavior. Verify isolated IP/DNS/host port, without relaxing the request gate.
 - **200 socket write completed:** this is **not handset parser or callback acknowledgement**.
 
-**No E7 outcome recorded.** PR #17 remains draft, unmerged, documentation-only. `main` and private E7 software state are not changed by preparing this host script.
+**Owner-run E7 outcome is recorded above.** PR #17 remains draft, unmerged, documentation-only. `main` and private E7 software state are not changed by preparing this host script.

@@ -74,6 +74,12 @@ The owner used the existing previously flattened E32 image at `~/Documents/E7 du
 
 No source firmware or generated ELF was committed or uploaded; this is a report of the owner's text output only. No live phone activity occurred.
 
+## Actual Sanctuary Ghidra Thumb method validation (12 October 2026)
+
+Owner ran REA 6.4.0 `instructions` with the original SHA256-verified `iaupdateengine.dll.flat.bin` analysis-only ELF. **Success**: `read_function_instructions`, `procedure.address=0x9e7e`, `procedure.name=CIAUpdateLoader_OperationComplete`, `external=false`, `thunk=false`, with valid code and exactly matching Thumb prologue `push {r0,r1,r2,r4,r5,r6,r7,lr}`, `sub sp,#8`, `movs r5,r0`. The decoded method also shows `bl 0x9e28` at `0x9ee8` and `0x9f24` (historical `NextLoadLoopL`), and the final `iOperations.Count()==0` gate `0x9f60: bl 0x12b10; 0x9f64: cmp r0,#0; 0x9f66: bne 0x9f88` before observer dispatch at `0x9f68..0x9f70`. These are real firmware instructions under Ghidra, consistent with [Nokia's `CIAUpdateLoader::OperationComplete`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateloader.cpp#L323-L421).
+
+**Ghidra caveat:** it reports three discontiguous body ranges `0x9e7e..0x9ef3`, `0x9f0a..0x9f2f`, `0x9f4e..0x9f89`, containing 216 bytes in a 268-byte span. Its ending branch `0x9f88: b 0x9e20` targets outside that reported function body; whether this is a legitimate shared tail or synthetic-ELF analysis boundary issue is unverified. Next do standalone REA `decompile` on the named function, check control flow against the historical source and reject unsound inferred symbols/imports. No live runtime values, HTTP callbacks or on-device operation counts have been established. This was host-only; no ROM/cache modification or E7 network request.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

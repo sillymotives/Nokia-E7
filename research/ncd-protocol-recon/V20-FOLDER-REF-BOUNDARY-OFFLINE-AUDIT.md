@@ -2,6 +2,8 @@
 
 **12 October 2026 | Offline review after owner-operated v0.20. No new handset trial, firmware modification, or responder.**
 
+**Same-day correction after further actual Belle disassembly:** the third `offline-root` child browse observed in v0.19 is strong evidence that the initial root load **progressed far enough for IAUpdate to schedule its next round**, rather than remaining stuck before initial root completion. The compiled `CIAUpdateLoader::NodesUpdated` callback is a no-op (`bx lr`), whereas its `OperationComplete` starts subsequent child loading when `ChildCount()>0`. Moreover, the compiled NCD child-error path only sends IPC completion ID 3 when a proxy message is pending. See [the newer root-to-child completion audit](V20-BELLE-ROOT-TO-CHILD-COMPLETION-AUDIT.md) (54/54 static assertions). The earlier *root-success to proxy completion* focus below is retained as historical reasoning, **not the highest-priority current suspect**. No live callback was observed and the precise wait point remains unknown.
+
 ## Experimental boundary
 
 | Trial | Config | Root catalogue | Child | User-visible updater state |

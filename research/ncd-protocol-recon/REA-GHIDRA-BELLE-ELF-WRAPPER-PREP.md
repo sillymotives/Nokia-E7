@@ -29,6 +29,35 @@ It is **stdlib only**, requires explicit input path and separate existing output
 
 The output is intentionally a **synthetic analysis representation**, not a linker-corrected implementation of E32 relocations, data sections or imported Symbian runtime functions. The remaining flat-E32 metadata and external imports are not reconstructed. Ghidra could misinterpret mixed ARM/Thumb regions, vtables or cross-module calls; every function must be checked against previously verified address/instruction bytes before relying on pseudocode.
 
+## Owner's RPKG inventory and exact preserved images located (12 October 2026)
+
+The owner confirmed the case-sensitive original dump filename **`SYM.RPKG`** (uppercase). The read-only `e7_rpkg_inventory.py` parsed **13,356/13,356** advertised records from the 178,829,422-byte **RPK2** archive, with **0 trailing bytes**, and identified 51 updater/catalogue related objects. The compressed E32 objects `Z:\\sys\\bin\\iaupdateengine.dll`, `iaupdate.exe`, `ncdproxy_20019119.dll`, and `ncdserver_20019119.exe` were all present with an `EPOC` signature at byte 16.
+
+**More importantly:** four previously flattened image files exist already beneath the owner's E7 dump working tree in **`e7-updater-bytepair-v02/`**:
+
+- `iaupdateengine.dll.flat.bin`
+- `iaupdate.exe.flat.bin`
+- `ncdproxy_20019119.dll.flat.bin`
+- `ncdserver_20019119.exe.flat.bin`
+
+These are *file-existence observations*, not new hash checks. The converter must still enforce the expected exact flat-E32 SHA256 before generating the analysis carrier. **Original RPKG embedded compressed-image hashes and later flattened-image hashes differ by design**; do not compare them as though they were identical raw files. There is **no reason to extract or unpack the 171-MiB archive again** just to begin Ghidra analysis.
+
+Proposed next owner-only host command, after downloading the previously delivered converter:
+
+```sh
+source ~/opt/e7-rea-env.sh
+DUMP="$HOME/Documents/E7 dump"
+SRC="$DUMP/e7-updater-bytepair-v02/iaupdateengine.dll.flat.bin"
+OUT="$HOME/Downloads/e7-rea-elf-work"
+printf '%s  %s\\n' 'f395e88a078d6837823e169c1209d6ad295dad242ef5564b144c97584ec5ab99' "$SRC" | sha256sum -c -
+install -d -m 0700 "$OUT"
+python3 "$HOME/Downloads/e7_make_ghidra_elf.py" --input "$SRC" --output-dir "$OUT"
+readelf -h -l -sW "$OUT/iaupdateengine.dll.flat.bin.analysis.elf"
+npx -y rea-agents@6.4.0 analyze "$OUT/iaupdateengine.dll.flat.bin.analysis.elf" --provider ghidra --json > "$OUT/overview.json"
+```
+
+As of this note, **this converter command and Ghidra ARM import have not been run on Sanctuary**. Nothing is written to the E7, the source E32 is unchanged and no file blobs are uploaded or committed.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

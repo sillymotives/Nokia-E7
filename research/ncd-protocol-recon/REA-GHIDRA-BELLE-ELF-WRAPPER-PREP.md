@@ -169,6 +169,38 @@ Next safe, nonmutating host step: force explicit **Thumbv5TE** LLVM disassembly 
 
 **No handset connection, catalogue probing, source/ELF upload, runtime callback trace, cached private file mutation, or merge occurred.** The repository PR remains documentation-only, draft and unmerged.
 
+## Actual owner LLVM Thumb confirmation of ordinary EFailed IPC gate (12 October 2026)
+
+Owner installed host-only LLVM 19 tooling and ran `llvm-objdump-19 -D --triple=thumbv5te-none-eabi --start-address=0x27388 --stop-address=0x273b2` on the **exact checksum-verified synthetic** ELF32 ARM `ncdserver_20019119.exe.flat.bin.analysis.elf`, SHA256 `e81c6fe132922455bff8addb691f342e45be026623c0f5aa6dd53e57593f215d`. This direct forced-Thumb disassembly succeeds **even though Ghidra's automatic function body contained only 29 instruction lines for the surrounding state machine**.
+
+Decisive **actual preserved firmware instruction sequence**:
+
+```asm
+27388: e7ca          b    0x27320    ; previous state branch, not EFailed entry
+2738a: 6820          ldr  r0,[r4]
+2738c: 6a81          ldr  r1,[r0,#0x28]
+2738e: 0020          movs r0,r4
+27390: 4788          blx  r1         ; virtual Cancel, source-correlated
+27392: 6ee0          ldr  r0,[r4,#0x6c]  ; candidate iPendingMessage
+27394: 2800          cmp  r0,#0
+27396: d0c3          beq  0x27320    ; no pending IPC: skip error message send
+27398: 6820          ldr  r0,[r4]
+2739a: 2203          movs r2,#3      ; ENCDOperationMessageCompletionError
+2739c: 6d45          ldr  r5,[r0,#0x54]
+2739e: 6b23          ldr  r3,[r4,#0x30]  ; iError
+273a0: 9914          ldr  r1,[sp,#0x50]  ; message argument (not yet traced back)
+273a2: 0020          movs r0,r4
+273a4: 47a8          blx  r5         ; virtual CompleteMessage overload
+273a6: e7bb          b    0x27320    ; shared following block not yet independently decoded
+```
+
+This is now **independent LLVM reconstruction of the ordinary `DoRunOperationL` EFailed state**, not the separate `RunOperation()` TRAP/Leave error handler at `0x273ea..0x27418`. Both compiled failure variants independently gate the outgoing **client error IPC completion ID 3** on a pending message, as described by original Nokia source [`case EFailed` lines 2310–2324](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp#L2310-L2324). This substantiates the presence of the gate in the real ROM, **not the runtime contents of `iPendingMessage` during the handset's child HTTP 404**, nor whether the server's own `CompleteCallback` or client observer ran.
+
+Next nonmutating host work:
+1. LLVM Thumb disassemble the shared branch destination `0x27320` in a small bounded window to verify the server callback and return behavior.
+2. LLVM Thumb disassemble the `MCatalogsHttpObserver` methods around `0x25630` / `0x25670` and verify which instruction blocks belong to the actual `HandleHttpError`; **audit note discrepancy:** V20 identifies the function pointer at **0x25671** while also attributing its state-setting block to **0x2565c..0x2566a**, before that candidate method start. Avoid propagating the attribution until independent disassembly resolves it. Historical source says `HandleHttpError` sets `iLoadNodeState=EFailed`, copies HTTP error, and calls `RunOperation` [lines 442–465](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp#L442-L465).
+3. Continue without any synthetic phone trials, private-cache modifications, firmware writes or executable uploads. PR remains docs-only, draft, unmerged. **No live E7 callback path has been traced.**
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

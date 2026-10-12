@@ -110,6 +110,25 @@ The code searches the outstanding-operation array, finds a matching operation, g
 
 **Preservation:** all research offline. Do not run a new updater check, alter private NCD cache, install Symbian debugger, or commit proprietary E32 images/ELF output. Draft PR #17 remains docs-only, unmerged; `main` untouched.
 
+## Actual Sanctuary NCD proxy CompleteCallback Thumb validation (owner-operated, 12 October 2026)
+
+The owner verified the preserved `ncdproxy_20019119.dll.flat.bin` using exact SHA256 `09994060128754da1fe0bcfb6ce4c4766c8607eb978fc96768f623f9d9afda38` (PASS), and created the analysis-only ARM ELF. Converter confirmed `0x9c` E32 source code offset, virtual code base `0x8000`, **180,476 identical code bytes**, four predefined Thumb entrypoint symbols, and exact previously verified generated ELF SHA256 `95e97a93f2a1a69e62876c699df22cfd9cb6cf6a1c578d7f3163339c93d53c07`.
+
+The owner ran REA 6.4.0 / Ghidra 12.1.4 `instructions` for `CNcdLoadNodeProxy_CompleteCallback`. The returned actual method name was correct and resolved to **Thumb code at `0x12b54`**. Key observations (all from the owner's Ghidra instruction output):
+
+- `0x12b54: push {r0,r1,r4,r5,r6,r7,lr}`; `0x12b56: sub sp,#4`: valid Thumb prologue.
+- `0x12b5a..0x12b60`: virtual call through vtable offset `+0x18`, consistent with `AddRef()`.
+- `0x12b66: adds r5,#0x74`, `0x12b6a: adds r7,#0x6c`: object/observer-array and interface-base pointer adjustments.
+- `0x12b6e..0x12b80`: fetches current observer, loads saved error argument (`ldr r2,[sp,#8]`), and calls vtable offset `+0x8` with a `this`-adjusted operation argument, consistent with `iObservers[i]->OperationComplete(*this,aError)`.
+- `0x12b82..0x12b8c`: increments index, fetches collection count and loops while observers remain.
+- `0x12b8e..0x12b94`: vtable call through offset `+0x1c`, consistent with `Release()`; `0x12b96` restores registers and returns.
+
+This independently tracks Nokia's [historical 377–390 `CNcdLoadNodeOperationProxy::CompleteCallback`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdloadnodeoperationproxy.cpp#L377-L390), which explicitly implements `AddRef(); for observers: OperationComplete(*this,aError); Release();`.
+
+**Evidence boundary:** Two *different preserved Belle modules* (IAUpdate engine and NCD proxy) have now been loaded into Ghidra and had meaningful Thumb methods validated against original Nokia source. Together they statically establish the producer/consumer ABI shape for this observer callback, **not its delivery in the physical E7 during the spinner**. This does **not** prove that the entire stack can be decompiled faithfully: other E32 binaries still require validation, missing import/data/relocation mappings limit cross-module decompilation, and the real waiting point (`iPendingMessage`, HTTP terminal state or `iOperations.Count()`) remains unobserved. Ghidra/REA supports the work; it is not a live Symbian debugger.
+
+**Next offline discriminator:** inspect the NCD client's `CNcdLoadNodeProxy_HandleCompletedMessage` at `0x1297c` and the NCD server's HTTP error handler and `EFailed` completion IPC gate, then correlate explicit completion ID 3 with this validated observer callback. Avoid additional E7 tests or claims of a repaired updater. No source ROM/ELF uploaded to the public repo or execution on the phone; research PR stays draft, unmerged and `main` unchanged.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

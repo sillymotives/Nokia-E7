@@ -1,6 +1,6 @@
-# E7 NCD v0.19: original configuration + root 200, guarded child 404
+# E7 NCD v0.19: original configuration + root 200, guarded child 404 (completed)
 
-**12 October 2026 | Prepared and host-tested ONLY. No v0.19 E7 check has been run.**
+**12 October 2026 | One owner-operated E7 trial completed after host verification.**
 
 ## Interpretation from the actual owner-operated v0.18 result
 
@@ -60,6 +60,25 @@ sudo python3 -u e7-root-200-child-404-control-v0.19.py --arm-once --acknowledge-
 ```
 
 **Only one normal Software Update check**, after `ARMED`; no downloads or installations. Even a standard check with 200 XML could change the E7's **unbacked protected NCD/IAUpdate cache**. **No verified rollback exists.** The experiment is optional, lower-risk than inventing new application metadata, but **not risk-free**.
+
+## Physical v0.19 observation (12 October 2026)
+
+The owner ran the original v0.14.5 **configuration HTTP 200** and **root folders+FolderData HTTP 200**, with no child ItemData. The exact guarded child browse was received and answered **empty HTTP 404**. Sanctuary's sanitized counters:
+
+- `configuration_200_attempted=true`, `configuration_200_socket_write_completed=true`, `configuration_xml_identical_to_v145=true`, `configuration_retries_after_one_shot=0`.
+- `root_200_attempted=true`, `root_200_socket_write_completed=true`, `root_response_body_bytes=566`, `root_xml_identical_to_v145=true`, `recognized_root_browse_seen=true`.
+- `recognized_child_browse_seen=true`, `child_http_404_attempted=true`, `child_404_socket_write_completed=true`, `child_404_body_bytes=0`.
+- `other_post_root_browse_attempts=0`, `other_requests=0`, `other_response_write_failures=0`, `handler_failures=0`; shutdown `post_child_observation_complete`.
+- **Handset observation, verbatim:** **"spinnyboy kept spinning. :p"**. This differs decisively from the v0.18 result, where the same original configuration 200 followed by root 404 ended with the standard unable-to-check error.
+
+The E7's child-metadata browse following the root 200 strongly indicates progression into the root's advertised hierarchy, but is **not an explicit on-device confirmation** that the root XML parser finished or the entire root NCD operation completed. The host cannot see HTTP terminal events, NCD proxy IPC or IAUpdate outstanding-operation count.
+
+**Narrow discriminator:** delivering successful **root 200/XML** and/or initiating the subsequent child load is sufficient to reproduce the spinner with an explicit child HTTP failure. Thus **successful child ItemData or fictional software identity is not required**. The observed difference is **root HTTP status / nonempty root XML / child-operation creation**. It does **not** prove which of those variables causes the stall.
+
+Earlier v0.14.1 also observed root 200 followed by an unallowlisted child 404 and persistent spinner. Even earlier v0.13 with **two zero-child `FolderRef`** responses and no fabricated child software left the updater spinning, albeit with a less mature fixture. These are corroborating historical observations **with different source payloads and conditions**, not strict same-fixture causal tests; see [`V14-1-REVIEW.md`](V14-1-REVIEW.md) and [`V14-REVIEW.md`](V14-REVIEW.md).
+
+**Stop changing child metadata:** root-success and child-failure paths already reproduce the wait. Do not retry, add an SIS/SISX, clear the E7 private cache, or assume child error did not reach Nokia. Focus further work on a minimal **root status/body** control and the existing compiled Belle operation completion pathway.
+
 
 ## Interpreting a physical result, not precommitting to one
 

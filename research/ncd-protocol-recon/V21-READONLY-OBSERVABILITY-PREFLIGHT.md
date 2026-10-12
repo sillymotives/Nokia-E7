@@ -50,6 +50,41 @@ The scan is bounded (depth <=8, <=12000 files/root, <=16 candidates), excludes n
 
 **8/8 local unit tests passed**, covering strict file detection, bounded walks, symlink handling, digest correctness, private-name redaction, and lack of file creation. These tests were host-only, not E7 tests. The authoring container's lack of matching tools has **no bearing on whether Sanctuary has them**.
 
+## Owner's Sanctuary preflight result (12 October 2026)
+
+Owner ran `python3 e7-observability-preflight.py`. The actual tool reported:
+
+- `debugger_binaries_or_packages: []`; `coda`, `gdb`, `qtcreator`, `symbian-gcce-link`, and `trk` command lookups all returned false.
+- **But** the file-scan cap was reached under `/home/darkstar/Downloads`, and both configured `/opt/toolchain/current` and `/toolchain/current` paths were absent. This is **not evidence that Sanctuary has no SDK/debugger elsewhere**. The command inventory did not check `node`, `npm`, `java`, `javac`, `ghidraRun` or `support/analyzeHeadless`.
+- Four pre-existing Bridge snapshots contained **173, 172, 166 and 173 process entries**, all with `iaupdate_present=true` and `ncdserver_present=false`; no CODA/TRK process names. These snapshots predate the v0.15–v0.20 active checks, so `ncdserver_present=false` is **not proof the server fails to launch during an updater run**.
+- No phone connection, new process sampling or device action occurred in this preflight.
+
+## Owner-proposed REA (`morluto/rea`) assessment
+
+Examined [REA README](https://github.com/morluto/rea/blob/main/README.md), [Ghidra provider setup](https://github.com/morluto/rea/blob/main/docs/installation.md#ghidra), [current raw-binary specification](https://github.com/morluto/rea/blob/main/docs/raw-binary.md), and actual [raw language mapping](https://github.com/morluto/rea/blob/main/src/ghidra/GhidraRawBinaryLanguage.ts) on **2026-10-12**. `morluto/rea` is an MCP/CLI AI-agent **orchestrator around existing Ghidra, IDA or Hopper**, not a Symbian debug agent or live IPC monitor.
+
+**Potential value:** prompt-driven local **static** decompilation, xrefs and caller tracing around actual Belle `CNcdLoadNodeOperationImpl::HandleHttpError`, `EFailed`, `CNcdLoadNodeOperationProxy::CompleteCallback`, and `CIAUpdateLoader::OperationComplete`; easy repeatable artifact evidence. This could speed hypothesis ranking. It cannot show the handset's live `iPendingMessage` value or `iOperations.Count()`, and does not by itself fix a stale updater service.
+
+**Major format/architecture caveat:** REA's current *headerless* `--target-format raw-binary --architecture arm` mode forces generic **`ARM:LE:32:v7`**, mapping input file offset **zero** to a caller-supplied address. It explicitly does **not** support Thumb-only variants as raw processors. The preserved Nokia binaries are Symbian E32/flattened E32 with Thumb code, E32 code-section file offset `0x9c`, and historical code base `0x8000`. **Do not blindly import the `.flat.bin` as raw ARMv7 and treat pseudocode as correct.** Prefer a previously established **analysis-only ELF wrapper preserving the byte-for-byte E32 code section**, known code coordinate mapping and an explicitly selected/verified Ghidra ARM/Thumb language and seeded function starts. Confirm successful Ghidra import, Thumb disassembly and mapping **before** any decompilation assertion. The earlier private LLVM synthetic ELF was not itself validation of Ghidra's import or of REA compatibility.
+
+**Dependencies:** README says REA needs Node.js 22.x >= 22.19, 24.x >= 24.11 or 26+ and npm. Native decompilation also requires an existing licensed/available analysis provider; on Linux REA's Ghidra adapter documents an existing Ghidra **12.1.x** and **64-bit full JDK 21+**. The host preflight did **not** check these dependencies. Running `npx rea-agents setup` is a configuration-changing setup action, **not** a read-only preflight. The documented npm release and repo `main` can differ: `docs/raw-binary.md` and `src/ghidra/GhidraRawBinaryLanguage.ts` were absent from the documented 6.4.0 release commit, so do not assume `@latest` exposes every current-`main` command.
+
+Recommended next **host-only** commands, not executed by the assistant:
+
+```sh
+for cmd in node npm java javac ghidraRun analyzeHeadless; do
+  printf '%-16s ' "$cmd"
+  command -v "$cmd" || true
+done
+node --version 2>/dev/null || true
+npm --version 2>/dev/null || true
+java -version 2>&1 | head -n 2
+javac -version 2>&1
+find /opt "$HOME/Downloads" -maxdepth 6 -type f -name analyzeHeadless -print 2>/dev/null | head -n 12
+```
+
+No automatic download, `npx` execution, `sudo`, phone debugger installation, NCD responder or protected cache modification is justified from this evaluation. The original preserved Belle images should stay private; REA runs local analysis but an AI agent may transmit returned evidence to its provider under separate data terms.
+
 ## Interpretation and next decision
 
 - If **no agent** is found: don't assume one is absent from the phone; the host-side install path is simply unconfirmed.

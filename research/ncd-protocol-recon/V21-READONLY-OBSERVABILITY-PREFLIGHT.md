@@ -85,6 +85,18 @@ find /opt "$HOME/Downloads" -maxdepth 6 -type f -name analyzeHeadless -print 2>/
 
 No automatic download, `npx` execution, `sudo`, phone debugger installation, NCD responder or protected cache modification is justified from this evaluation. The original preserved Belle images should stay private; REA runs local analysis but an AI agent may transmit returned evidence to its provider under separate data terms.
 
+## Owner-operated REA/Ghidra provider doctor result (12 October 2026)
+
+The owner followed the user-local Sanctuary installation instructions and supplied the complete JSON from `npx -y rea-agents@latest doctor --provider ghidra --json`:
+
+- `healthy=true` for the explicitly selected **Ghidra provider**. All **9 of 9** scoped checks passed: Node **24.21.0**, Ghidra **12.1.4** under `~/opt/ghidra_12.1.4_PUBLIC`, Linux x64 platform, valid Ghidra installation, `analyzeHeadless` present, native decompiler executable recognized as Linux x86-64 ELF, and JDK **21.0.12.1** 64-bit installed. npm reports **11.19.0**; REA CLI identifies as **6.4.0**.
+- `environment_healthy=false` is a **broader informational** result rather than a failed selected-provider check. REA labels **Debian 13** `unsupported_host` even while all the direct Ghidra checks pass; Hopper and IDA are unconfigured, as are optional REA skill identity and Codex registration. Neither alternate engine nor agent setup is required for REA **standalone CLI** analysis.
+- The diagnostic does **not prove headless Ghidra has actually imported or decompiled a target** on Debian 13. This needs a separate, fully offline **non-Symbian** smoke test before analyzing the protected Nokia artifacts.
+- The pinned REA **6.4.0** documentation explicitly supports `rea analyze /absolute/path/to/program --provider ghidra --json`. Proposed smoke test: `/usr/bin/true` (local Linux ELF x86-64), with output saved privately and no E7 connection. Use `npx -y rea-agents@6.4.0 analyze /usr/bin/true --provider ghidra --json`, not `rea setup`, to avoid automatic agent registration. npx may contact npm for its package cache.
+- **Still unresolved:** the correct importer and ARM/Thumb mapping for original Belle E32 binaries. Ghidra's importer on REA 6.4.0 does not automatically understand the original Symbian E32 format and the later current-`main` headerless ARM mode excludes Thumb-only mappings. Retain original E32 images and use independently verified analysis-only ELF mapping before drawing claims from pseudocode.
+
+No smoke-test outcome was reported with this doctor output. The handset was not contacted, rebooted, patched or re-tested. No installer or private NCD/IAUpdate cache operation was performed.
+
 ## Interpretation and next decision
 
 - If **no agent** is found: don't assume one is absent from the phone; the host-side install path is simply unconfirmed.

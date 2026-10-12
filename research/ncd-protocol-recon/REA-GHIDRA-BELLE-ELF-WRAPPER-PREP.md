@@ -58,6 +58,22 @@ npx -y rea-agents@6.4.0 analyze "$OUT/iaupdateengine.dll.flat.bin.analysis.elf" 
 
 As of this note, **this converter command and Ghidra ARM import have not been run on Sanctuary**. Nothing is written to the E7, the source E32 is unchanged and no file blobs are uploaded or committed.
 
+## Actual Sanctuary ARM ELF import succeeded (owner-operated, 12 October 2026)
+
+The owner used the existing previously flattened E32 image at `~/Documents/E7 dump/e7-updater-bytepair-v02/iaupdateengine.dll.flat.bin`. Its independently displayed `sha256sum` was **`f395e88a078d6837823e169c1209d6ad295dad242ef5564b144c97584ec5ab99`**, an exact match to the earlier preserved-Belle audit. Running the separately supplied `e7_make_ghidra_elf.py` produced the following **actual** user-visible verification:
+
+- `status=created_analysis_elf_not_phone_executable`
+- `code_bytes_identical=true`, `code_bytes=62780`, `source_code_offset=0x9c`, `mapped_code_base=0x8000`
+- **ELF digest exactly matches the previously authoring-host verified output:** `c148868d92d698124f04d68b88603e4682a076e2b71c9dc462e681ba37315e89`.
+- `readelf` reported **ELF32 ARM, entry address 0x8000**. Five `CIAUpdateLoader_*` Thumb-tagged `STT_FUNC` ELF symbols were present, including `CIAUpdateLoader_OperationComplete` symbol **0x9e7f** (instruction address **0x9e7e**), and `NodesUpdated` symbol **0x9d9f**.
+- Owner then ran the **actual** `npx -y rea-agents@6.4.0 analyze "$ELF" --provider ghidra --json` against the generated **Nokia** ELF. The returned JSON evidence began with `operation=binary_overview`, `subject.format=elf`, `architecture=arm`, a matching ELF SHA256, and an upstream `provider.id=ghidra`, `version=12.1.4`, `loader=auto-from-header`. **No stderr errors were reported.**
+
+**Meaning:** REA/Ghidra did successfully import the ARM ELF carrier *on Sanctuary*, not just the earlier `/usr/bin/true` Linux x86-64 smoke target. This retires the prior "ARM Ghidra import untested" gate. It does **not** prove Ghidra selected Thumb mode for the target routine, decoded `OperationComplete` correctly, inferred imports/relocations, or produced valid function pseudocode.
+
+**Next gate (host-only):** `npx -y rea-agents@6.4.0 instructions "$ELF" CIAUpdateLoader_OperationComplete --provider ghidra --json` (pinned 6.4.0 [CLI docs](https://github.com/morluto/rea/blob/a56f7bb668ab23fec8d33f7af353ac7ed2fe1895/docs/cli.md)). Inspect procedure identity, decoded instruction address and mnemonic. Compare the first Thumb instructions to independent LLVM Thumbv5TE bytes at `0x9e7e` before requesting or trusting pseudocode. Inference of runtime `iOperations` state on the E7 remains impossible from static decompilation alone.
+
+No source firmware or generated ELF was committed or uploaded; this is a report of the owner's text output only. No live phone activity occurred.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

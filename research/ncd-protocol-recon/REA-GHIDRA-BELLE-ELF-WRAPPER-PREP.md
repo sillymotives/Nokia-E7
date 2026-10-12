@@ -129,6 +129,29 @@ This independently tracks Nokia's [historical 377–390 `CNcdLoadNodeOperationPr
 
 **Next offline discriminator:** inspect the NCD client's `CNcdLoadNodeProxy_HandleCompletedMessage` at `0x1297c` and the NCD server's HTTP error handler and `EFailed` completion IPC gate, then correlate explicit completion ID 3 with this validated observer callback. Avoid additional E7 tests or claims of a repaired updater. No source ROM/ELF uploaded to the public repo or execution on the phone; research PR stays draft, unmerged and `main` unchanged.
 
+## Actual Sanctuary NCD HandleCompletedMessage Thumb and pseudocode validation (12 October 2026)
+
+The owner ran REA 6.4.0 / Ghidra 12.1.4 `instructions` **and** `decompile` against the prior checksum-verified, analysis-only `ncdproxy_20019119.dll` ARM ELF (`95e97a93f2a1a69e62876c699df22cfd9cb6cf6a1c578d7f3163339c93d53c07`). Both operations completed. `CNcdLoadNodeProxy_HandleCompletedMessage` resolved at **0x1297c**, with **59 Ghidra instruction lines** in the owner's output.
+
+Verified branch and virtual-dispatch observations:
+
+| Belle ARM/Thumb code address | Observed behavior | Independently corroborating original Nokia source |
+| --- | --- | --- |
+| `0x12986: cmp r1,#5`, `0x12988: bne 0x12a18` | Completion ID **5** gets a distinct `NodesUpdated` path; others use the base dispatch | [`CNcdLoadNodeOperationProxy::HandleCompletedMessage`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdloadnodeoperationproxy.cpp#L258-L306) |
+| `0x129a8..0x129ce` | Clears/repopulates loaded-node identifiers from completion stream | same source, lines 270–283 |
+| `0x129d0..0x129d6`: virtual call at `+0x28` | Sends the next **Continue** request | same source, line 284; separate request function ID **3** |
+| `0x12a04..0x12a08`: virtual call at `+0x30` | Normal progress callback after successful trap | same source, lines 286–290 |
+| `0x12a0e..0x12a14`: virtual call at `+0x38` | Error completion callback with error in `r1`, after error trap | same source, lines 291–294 |
+| `0x12a18..0x12a1c`: direct call `0x12220` | Non-ID-5 completion handed to `CNcdBaseOperationProxy::HandleCompletedMessage` | same source, lines 298–302; [base completion ID 3=Error, 4=Complete](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdbaseoperationproxy.cpp#L318-L330) |
+
+**Decompiler reliability caveat:** Ghidra warned `Removing unreachable block (ram,0x00012a0e)` and omitted the `CompleteCallback(err)` branch from C pseudocode. The preserved *instruction disassembly* still contains that branch. Historical source wraps parsing/continue in `TRAPD(err,...)` and executes the error callback for nonzero error. This likely represents **incomplete Symbian trap/exception flow recovery in the synthetic code-only ELF**, not proof that the original Belle error branch is unreachable. The actual runtime execution of that branch remains unknown. Also, the decompiler's `thunk_EXT_FUN` names are unresolved imports, not reliable original function identities.
+
+**Meaning:** The physical Belle client's ID-5 special path, base-dispatch handoff, expected Continue/progress/error callbacks, and separate observer `CompleteCallback` are now independently corroborated by Ghidra's *actual Thumb disassembly* and historical C++. This is not a complete stack reconstruction or direct E7 IPC/runtime trace. The connection from a child HTTP 404 through the NCD server's `EFailed` and pending IPC message still needs validation.
+
+**Next owner-only offline analysis:** `ncdserver_20019119.exe.flat.bin` already exists in the same private `e7-updater-bytepair-v02` directory; expected SHA256 `c26fc0dea62a0a1a3a26e6bf387ad6dca78a581a7214fb8fc11d8748b407baa5`. Generate a separate analysis ELF with the existing fail-closed converter; expected ELF SHA256 `e81c6fe132922455bff8addb691f342e45be026623c0f5aa6dd53e57593f215d`. Converter seeds `CNcdLoadNodeOperation_DoRunOperationL` at **0x26e94** and `CNcdLoadNodeOperation_RunOperation` at **0x273b2**, allowing read-only Ghidra instructions near `0x2732c..0x2738c` for the `EFailed` path and its `iPendingMessage` gate. Separately audited `HandleHttpError` is near **0x25670**; it currently has no converter-predefined ELF function symbol, so don't assume automatic Ghidra discovery. Keep `RunOperation` symbol distinct from its target `DoRunOperationL`. Do not edit the user's verified converter or original image merely to add a label.
+
+Phone untouched, no new synthetic catalogue response, cache/flash/debugger change, or proprietary binaries committed. Draft PR #17 remains open and unmerged.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

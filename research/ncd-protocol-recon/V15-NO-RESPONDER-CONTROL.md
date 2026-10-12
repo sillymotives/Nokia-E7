@@ -1,6 +1,6 @@
-# E7 NCD v0.15: no-responder transport-failure control (proposed)
+# E7 NCD v0.15: no-responder transport-failure control (completed)
 
-**12 October 2026 | Planned, NOT executed on the E7 at the time of writing.**
+**12 October 2026 | One owner-operated E7 control completed. No synthetic HTTP response or catalogue was served.**
 
 ## Research question
 
@@ -31,6 +31,18 @@ sudo timeout --signal=INT 130s tcpdump -i wlxf0a7314bcc29 -nn -l -q -tttt -s 96 
 
 Run the manual updater check **only while the observer is running**.
 
+## Observed result, supplied by owner on 12 October 2026
+
+**E7 UI:** the updater spinner **stopped**, followed by the message **"unable to check for updates please try again later"** (owner's transcription). The control therefore shows that the native E7 updater **can terminate a failed connection attempt and display a failure**, unlike the prior synthetic HTTP-200 runs where the spinner persisted.
+
+**Passive Sanctuary capture:** only two TCP packets matched the port-80/flags-only capture filter; **zero packets dropped**. At `2026-10-12 19:21:51.082075`, `10.42.0.85:36752 -> 10.42.0.1:80` (`tcp 0` in quiet tcpdump formatting). At `19:21:51.082217`, `10.42.0.1:80 -> 10.42.0.85:36752` (`tcp 0`). The request-response spacing was **142 microseconds**. The observer printed `2 packets captured, 2 packets received by filter, 0 dropped by kernel`. The host did not start an HTTP responder and reported no service or firewall changes.
+
+**Important evidence boundary:** the `-q` (quiet) output shows `tcp 0`, **not explicit TCP SYN or RST symbols**. The filter matched packets bearing at least one of SYN/FIN/RST, and a two-packet exchange against a closed port is *consistent with* immediate SYN/RST refusal, but these particular display lines **do not prove each packet's flags**. Future passive controls can omit `-q` to show flags, without capturing payloads. We do **not** need to rerun this successful discriminating control just to see its flags.
+
+**Interpretation:** the general phone network connection is working, and **a failed connection can reach visible updater completion**. The outcome does **not prove** that the successful 200 bytes were received or parsed during v0.14.5, nor identify the stalled internal handler. It narrows the remaining hypothesis to differences in the completed-TCP / HTTP-response / NCD-parser / proxy-IPC / loader or UI state path.
+
+**Highest-value next discriminator, not yet executed:** a one-shot, well-formed **HTTP 404 with an empty body**, returned to an allowlisted updater request, versus the already known kernel connection refusal. This would isolate whether *receiving any HTTP response* rather than a refused TCP connection changes spinner behavior, without fabricating more metadata. A normal updater run can still modify private NCD/IAUpdate caches, so only conduct such a test with renewed informed user consent and bounded host-side instrumentation. No SIS package, downloads, or extra retries.
+
 ## Outcomes and honest limits
 
 | Captured TCP evidence and observed UI | What it tells us | What it does not tell us |
@@ -42,6 +54,6 @@ Run the manual updater check **only while the observer is running**.
 
 Neither peer ACKs nor Symbian internal HTTP events can be inferred from a SYN/RST-only capture. A normal update check might independently mutate protected E7 cache, so this is **lower risk, not risk-free**.
 
-**No result is recorded yet.** Do not report success, an error popup, retry pattern or handset behavior until the owner supplies an actual observation. If no decisive result emerges, preserve the E7 and pursue read-only instrumentation rather than synthesizing more update records.
+**One observed, bounded E7 result is now recorded above.** Do not infer success/acceptance of any previous HTTP 200 catalogue. Preserve private updater state while choosing a single well-specified next discriminator.
 
 **Branch policy:** documentation-only draft [PR #17](https://github.com/sillymotives/Nokia-E7/pull/17), unmerged; `main` untouched.

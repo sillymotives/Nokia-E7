@@ -1,6 +1,6 @@
-# E7 NCD v0.16: one-shot HTTP 404 response-control plan
+# E7 NCD v0.16: one-shot HTTP 404 response control (completed)
 
-**12 October 2026 | Prepared and locally tested ONLY; the E7 has NOT run this test.**
+**12 October 2026 | One owner-operated E7 check completed; HTTP 404 response followed by normal visible updater error.**
 
 ## Reason for the control
 
@@ -42,6 +42,22 @@ sudo python3 -u e7-http-404-control-v0.16.py --arm-once --acknowledge-cache-risk
 
 Start one ordinary Software Update check while it prints `ARMED`. The listener will stop after the first qualifying response or within 90 s. Observe whether the spinner ends and the exact error message, and share **only the sanitized RESULT**. No need to select/install/download anything. An ordinary update check may still change the phone's private NCD/IAUpdate caches; **no verified rollback exists**, even though this script serves no XML or app payload.
 
+## Owner-operated physical result (12 October 2026)
+
+The owner manually ran v0.16 on Sanctuary with the existing isolated `E7-Sanctuary-Lab` hotspot and reported the following sanitized output:
+
+- Exact known E7 configuration POST shape matched: `configuration_request_shape_matched=true`.
+- The responder attempted **exactly one empty HTTP 404**, `response_body_bytes=0`, and successfully flushed the server-side socket: `response_socket_write_completed=true`.
+- `other_requests_discarded_without_http_response=0`, the server shut down with `server_shutdown_reason=one_configuration_404_attempted`, and no XML/catalogue/installation/download payload was delivered.
+- Owner's direct handset UI observation: **"spinnyboi closed out then said the old unable to check for update"**. The spinner stopped and the standard unable-to-check error appeared.
+
+**Interpretation:** an actual HTTP 404 from a responding Sanctuary server, as well as the previous TCP-refusal/no-listener control, yields **visible error completion** on the E7. The indefinitely spinning UI in the 200-based catalogue experiments is therefore **associated with a different processing path**, not with every HTTP or transport failure. The sanitized server output is **still not proof of E7 HTTP parser acceptance or a specific `ESucceeded` callback**. The owner-observed completion is the stronger evidence that the *failure path* finished.
+
+Historical Nokia source offers a specific code-level reason: [`CCatalogsHttpTransaction::ResponseReceived` for status >= 400](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/engine/transport/src/catalogshttptransaction.cpp#L621-L652) selects `ECatalogsHttpOpFailed` and forwards `HandleHttpError`; for 2xx status it instead marks the operation in progress, notifies observer and awaits normal response-body/completion processing. Historical [`CCatalogsHttpStack::MHFRunL`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/engine/transport/src/catalogshttpstack.cpp#L469-L710) calls `ResponseReceived` after receiving headers and treats the 2xx response body as parser input. This is *source-level* explanation consistent with the observation; it does **not** prove which exact Belle callback fired or diagnose the 200 path's pending operation.
+
+**Controlled next comparison (not yet run):** one HTTP 200 with **zero-length body** to the *same configuration request* would isolate a successful HTTP status with **no XML parser bytes**, separating response-status handling from the full 200 XML configuration/root/child sequence. This would still be an app-level invalid empty configuration body, so only a **diagnostic**, not a repair or valid NCD catalogue. No additional live retries, installer payloads or cache resets should occur without fresh consent and the usual private-cache risk acknowledgement.
+
+
 ## Interpretation, without overclaiming
 
 - **HTTP 404 produces visible error and stops spinner:** handling an HTTP error can drain to UI, while the prior three HTTP 200 catalogue responses did not. Concentrate on 200 terminal-success and parser/NCD completion boundary. **Does not by itself establish a parser bug.**
@@ -49,4 +65,4 @@ Start one ordinary Software Update check while it prints `ARMED`. The listener w
 - **No matching POST:** the control did not reach its intended envelope; do not infer about HTTP completion. Recheck DHCP/host routing and any local cache path; do **not** relax request allowlist automatically.
 - **Socket write completed:** confirms only host `wfile.flush`, never an E7 parser ACK or end-to-end completion.
 
-**As of this note: no phone outcome, no extra experiment performed and no app installer/payload produced.** Keep [draft PR #17](https://github.com/sillymotives/Nokia-E7/pull/17) open and unmerged. All current writes are documentation-only on its research branch; `main` remains untouched.
+**Outcome recorded above: a single E7 trial ended with the standard updater error; no installable payload produced.** Keep [draft PR #17](https://github.com/sillymotives/Nokia-E7/pull/17) open and unmerged. All current writes are documentation-only on its research branch; `main` remains untouched.

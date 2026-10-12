@@ -80,6 +80,36 @@ Owner ran REA 6.4.0 `instructions` with the original SHA256-verified `iaupdateen
 
 **Ghidra caveat:** it reports three discontiguous body ranges `0x9e7e..0x9ef3`, `0x9f0a..0x9f2f`, `0x9f4e..0x9f89`, containing 216 bytes in a 268-byte span. Its ending branch `0x9f88: b 0x9e20` targets outside that reported function body; whether this is a legitimate shared tail or synthetic-ELF analysis boundary issue is unverified. Next do standalone REA `decompile` on the named function, check control flow against the historical source and reject unsound inferred symbols/imports. No live runtime values, HTTP callbacks or on-device operation counts have been established. This was host-only; no ROM/cache modification or E7 network request.
 
+## Actual REA Ghidra OperationComplete pseudocode, source comparison (12 October 2026)
+
+The owner executed `npx -y rea-agents@6.4.0 decompile ... CIAUpdateLoader_OperationComplete --provider ghidra --json` against the checksum-matched **analysis-only** `iaupdateengine.dll` ELF. The command returned `operation=procedure_pseudo_code` and decompiled the real Thumb method at `0x9e7e`, consistent with the previously verified instruction body.
+
+Key decompiler identifications, **inferred by direct comparison to** [Nokia's historical `CIAUpdateLoader::OperationComplete` source](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/iaupdate/IAD/engine/controller/src/iaupdateloader.cpp#L323-L422):
+
+| Ghidra representation | Source meaning |
+| --- | --- |
+| `param_1` | loader instance (`this`) |
+| `param_2` | `MNcdLoadNodeOperation& aOperation` |
+| `param_3` | `TInt aError` |
+| `param_1 + 0x10` | `iOperations` array |
+| `param_1 + 0x0c` | `iObserver` |
+| `param_1 + 0x34` | accumulated `iErrorCode` |
+| `piVar7` after `Node()` call | `operationNode` |
+| `local_28` | operation-type enum retrieved from matched array record |
+| `FUN_00012b10` with array pointer | consistent with array `Count()` helper |
+
+The code searches the outstanding-operation array, finds a matching operation, gets `Node()`, releases and removes the matched operation, conditionally invokes `CIAUpdateLoader_NextLoadLoopL` both for `aError==0` and `aError!=0`, releases the node, and calls the observer **only if the current array count becomes zero**. Ghidra displays a branch `if (iVar1 == 0)` after `FUN_00012b10`; this matches the independent Thumb instruction sequence `0x9f60: bl 0x12b10`, `0x9f64: cmp r0,#0`, `0x9f66: bne 0x9f88`, followed by the indirect observer call at `0x9f68..0x9f70`. This is strong actual-Belle evidence of the final-completion gate, **not a trace of its runtime value**.
+
+**Limits / potential discrepancies:**
+
+- The generated C `thunk_EXT_FUN_0000080c` calls are **unresolved Symbian/import and TRAP mechanisms**, not reliable source-level function names or normal argument signatures. The decompiler fails to reproduce the historical source's `TRAPD(trapError)` propagation / `iErrorCode = trapError` for `NextLoadLoopL` throwing on the `aError==0` path. **Do not conclude the compiled binary omits this exception/error handling** from its absence in C pseudocode.
+- The owner output shows the indirect observer call and then `FUN_0000cfe8()` conditionally when `iErrorCode==0`. In the historical source the (likely) firmware-version save is before `iObserver.LoadComplete`, so there is an **apparent call-order divergence**. The instruction ordering is real, but the anonymous `FUN_0000cfe8` identity has **not been independently proven** here; treat this as a discrepancy requiring confirmation, **not an established updater bug**.
+- No imports, data section, relocations, live `iOperations.Count()`, client IPC callback or phone-side HTTP status was reconstructed. The synthetic ELF has limited runtime semantics; statically successful pseudocode is not proof the physical E7 ever took this path during the spinner.
+
+**Next host-only step:** analyze independently verified `ncdproxy_20019119.dll.flat.bin` (SHA256 `09994060128754da1fe0bcfb6ce4c4766c8607eb978fc96768f623f9d9afda38`) with the same fail-closed ELF converter, beginning at already labeled `CNcdLoadNodeProxy_CompleteCallback` (code `0x12b54`) and then `CNcdLoadNodeProxy_HandleCompletedMessage` (code `0x1297c`). Historical [derived proxy callback](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdloadnodeoperationproxy.cpp#L377-L390) notifies each observer's `OperationComplete`, while [base proxy completion ID 3](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdbaseoperationproxy.cpp#L318-L330) calls `CompleteCallback(iStatus.Int())`. Neither path has been observed live.
+
+**Preservation:** all research offline. Do not run a new updater check, alter private NCD cache, install Symbian debugger, or commit proprietary E32 images/ELF output. Draft PR #17 remains docs-only, unmerged; `main` untouched.
+
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 
 Ran `python3 -m py_compile`, **8/8** local converter tests, and `readelf` and LLVM disassembly checks against the four previously archived owner-provided flattened images, verifying their SHA256 identities and code preservation:

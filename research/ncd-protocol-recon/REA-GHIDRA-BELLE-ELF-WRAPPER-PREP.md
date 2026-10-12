@@ -198,8 +198,55 @@ This is now **independent LLVM reconstruction of the ordinary `DoRunOperationL` 
 
 Next nonmutating host work:
 1. LLVM Thumb disassemble the shared branch destination `0x27320` in a small bounded window to verify the server callback and return behavior.
-2. LLVM Thumb disassemble the `MCatalogsHttpObserver` methods around `0x25630` / `0x25670` and verify which instruction blocks belong to the actual `HandleHttpError`; **audit note discrepancy:** V20 identifies the function pointer at **0x25671** while also attributing its state-setting block to **0x2565c..0x2566a**, before that candidate method start. Avoid propagating the attribution until independent disassembly resolves it. Historical source says `HandleHttpError` sets `iLoadNodeState=EFailed`, copies HTTP error, and calls `RunOperation` [lines 442–465](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp#L442-L465).
+2. LLVM Thumb disassemble the `MCatalogsHttpObserver` methods around `0x25630` / `0x25670` and verify which instruction blocks belong to the actual `HandleHttpError`. The apparent V20 audit address mismatch was **resolved by later owner LLVM evidence (see below)**: `0x25671` is the Thumb-tagged vtable pointer to an adjusting thunk at 0x25670, which jumps backward to the actual body starting at 0x25634; the state-setting instruction range 0x2565c..0x2566a is therefore correctly within the body. Historical source says `HandleHttpError` sets `iLoadNodeState=EFailed`, copies HTTP error, and calls `RunOperation` [lines 442–465](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp#L442-L465).
 3. Continue without any synthetic phone trials, private-cache modifications, firmware writes or executable uploads. PR remains docs-only, draft, unmerged. **No live E7 callback path has been traced.**
+
+## Owner LLVM resolved HTTP observer adjustment thunk and EFailed tail (12 October 2026)
+
+The owner ran independent `llvm-objdump-19 -D --triple=thumbv5te-none-eabi` against the previously SHA256-verified analysis-only Nokia NCD server ELF, in ranges **0x27320–0x27348** and **0x25630–0x256a0**. These observations explain the apparent method-entry mismatch between the older vtable-audit address and the body that stores the HTTP error and `EFailed` state.
+
+**Confirmed adjusting-thunk relationship:**
+
+```asm
+25670: subs r0, #0xf4     ; adjust this for secondary MCatalogsHttpObserver interface
+25672: b    0x25634       ; branch into actual HandleHttpError body
+25634: push {r4,r5,r6,lr}
+...
+2564e: ldr  r1, [r0]     ; virtual method dispatch follows
+25650: ldr  r1, [r1,#4]
+25652: blx  r1           ; operation Release(), historically
+25654: movs r0, #0xff
+25656: movs r1, #0
+25658: adds r0, #0x2d
+2565a: str  r1, [r0,r4] ; clear pointer at this+0x12c, consistent with iTransaction=NULL
+2565c: movs r1, #5
+25660: str  r5, [r4,#0x30] ; store HTTP error as iError
+25662: str  r1, [r0,r4]    ; EFailed at this+0xfc (r0 reset at 2565e)
+25664: ldr  r0, [r4]
+25666: ldr  r1, [r0,#0x6c]
+25668: movs r0, r4
+2566a: blx  r1           ; vtable RunOperation() entry
+2566c: movs r0, #1       ; return ETrue
+2566e: pop  {r4,r5,r6,pc}
+```
+
+The actual vtable entry **0x25671** has Thumb bit set and dispatches to the thunk at **0x25670**, which subtracts **0xf4** from `this` then branches to the *earlier* implementation at **0x25634**. Hence the earlier V20 vtable/body addresses were **both correct**: there was no impossible source-order, only a secondary-interface C++ thunk. `0x25630` is the tail of an adjacent thunk for another HTTP observer method; `0x25674` begins another function, not the error handler. This confirms the actual compiled Belle `HandleHttpError` shape matches [Nokia source, lines 442–465](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdloadnodeoperationimpl.cpp#L442-L465), not just static source expectations.
+
+**Confirmed ordinary `EFailed` shared exit:**
+
+```asm
+27320: movs r0, r4
+27322: bl   0x24e12
+27326: b    0x26d2e
+```
+
+Both normal EFailed entry paths (pending IPC null and after sending ID 3) converge on the call **0x24e12** with the server operation as `this`. Historically this corresponds to the inherited **`CNcdBaseOperation::CompleteCallback()`**, which [iterates server observers](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdbaseoperation.cpp#L973-L979). **Exact target at 0x24e12 still needs function-body verification** before its identity can be called independently confirmed. Crucially, a *server observer callback* does not itself guarantee an IPC error was delivered to the *client proxy*.
+
+**Boundary:** the full *static* client notification pipeline's major branch shapes are independently corroborated, but we have **no phone-side evidence** that the live E7's HTTP 404 reached this handler, nor any observed `iPendingMessage`, client `CompleteCallback`, or IAUpdate outstanding-operation count. The synthetic ELF omits data/relocation/import semantics. This is not proof of a phone-side deadlock or a fixed update service.
+
+**Next owner-only offline probe:** disassemble the bounded **0x24e12–0x24e90** server callback code and **0x12220–0x12310** NCD proxy base completion dispatcher with LLVM Thumbv5TE. Compare the first to [`CNcdBaseOperation::CompleteCallback`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/server/src/ncdbaseoperation.cpp#L973-L979), and the second to [`CNcdBaseOperationProxy::HandleCompletedMessage`](https://github.com/SymbianSource/oss.FCL.sf.mw.appinstall/blob/760927eba63e3324cceee974b9ed582da90cb9a3/ncdengine/provider/client/src/ncdbaseoperationproxy.cpp#L269-L330), specifically completion ID 3 versus ID 4. Avoid assuming all decoded bytes within these arbitrary windows are a single function.
+
+No handset experiments, source-image change, executable or firmware-file upload to GitHub, or change to `main`. Draft PR remains docs-only and unmerged.
 
 ## Actual offline local static results, not yet a Sanctuary Ghidra test
 

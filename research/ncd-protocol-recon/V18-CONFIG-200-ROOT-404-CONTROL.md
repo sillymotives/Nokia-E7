@@ -1,6 +1,6 @@
-# E7 NCD v0.18: unchanged configuration 200, then root browse 404
+# E7 NCD v0.18: unchanged configuration 200, then root browse 404 (completed)
 
-**12 October 2026 | Prepared and host-verified only. The E7 has NOT run this test.**
+**12 October 2026 | One owner-operated E7 run completed after host-only verification.**
 
 ## What v0.17 established
 
@@ -46,11 +46,30 @@ sudo python3 -u e7-config-then-404-control-v0.18.py --arm-once --acknowledge-cac
 
 One normal E7 Software Update check only, and note whether its spinner ends or fails. Preserve original device state. **Even an ordinary update check may change unbacked protected NCD/IAUpdate cache. There is no verified rollback.**
 
+## Physical v0.18 result, reported 12 October 2026
+
+The owner operated the guarded v0.18 listener on the existing isolated Sanctuary E7 AP and supplied the sanitized result:
+
+- `configuration_200_attempted=true`; `configuration_200_socket_write_completed=true`; `configuration_xml_identical_to_v145=true`.
+- `recognized_root_browse_seen=true`; `recognized_root_http_404_attempted=true`; `recognized_root_404_socket_write_completed=true`; `recognized_root_404_response_body_bytes=0`.
+- No child-before-root attempts, extra requests or POSTS, configuration retries, handler failures or other socket-write errors.
+- Shutdown reason `post_browse_observation_complete`; listener disarmed normally. No root or child XML, software metadata or installer/download endpoint was served.
+- The owner said **"same thing. ;p"** after two immediately preceding experiments in which Spinnyboi *stopped* and displayed the standard unable-to-check error. This is treated as the same stopped-spinner/error outcome by conversational context, **not** an independently transcribed screen message for this run.
+
+**Bounded conclusion:** The E7 received enough of the original v0.14.5 configuration success path to issue the expected root browse, yet when that root returned an explicit 404, the UI was observed to recover into its ordinary unable-to-check failure path. Thus the **configuration 200 alone is not sufficient** to reproduce the indefinite spinner. An HTTP 200 root response and/or the child loads it starts are stronger discriminators.
+
+**Important historical overlap:** in actual previous **v0.14.1**, the host wrote configuration 200, **root 200**, and **then 404 for a distinct child browse** due to an over-strict host matcher, while the E7 *remained spinning*. This strengthens the root-success hypothesis, but differs in the root body contents and time/state of the test, so is not a strict same-fixture control. See [`V14-1-REVIEW.md`](V14-1-REVIEW.md) and [`V14-2-REVIEW.md`](V14-2-REVIEW.md).
+
+**Safer next controlled change (proposed only):** keep the exact v0.18 configuration 200 and all request gating, substitute the byte-identical v0.14.5 root-folder XML **HTTP 200** for the former empty root 404, then **404** the guarded follow-on child browse (no child item data). This isolates the effect of the *root response* more precisely than v0.14.1 and does not invent new software metadata. It still carries private NCD/IAUpdate cache-write risk with no verified rollback. Do not infer anything about handset parser ACKs from host write completion.
+
+
 ## What would the outcomes mean?
 
 - **Root browse matched and answered 404; phone spinner stops/error:** config source is usable enough to issue a subsequent browse; error propagation at *root* can finish. The unresolved difference in v0.14.5 lies **after** an allowed successful root 200 and/or the child metadata processing. Does not prove root 200 response was accepted.
 - **Config 200 sent, no root browse seen; phone stops/error:** configuration response may have been rejected or parsed without launching browse. Cannot isolate later root stages.
 - **Config 200 sent, root 404 answered; phone still spins:** outstanding config/root/error handling can remain pending under this sequence. Need a readonly client callback trace, not more speculative XML.
 - **No config matched, unexpected requests, any host write failure:** inconclusive. Recheck network/host preflight before making claims; **do not loosen protocol gates** to force a positive result.
+
+**Result observed and documented above; no new device change by this PR edit.**
 
 **PR policy:** documentation-only draft [PR #17](https://github.com/sillymotives/Nokia-E7/pull/17), unmerged; `main` unchanged. No phone image, raw request, exploit, installer or runnable responder committed.

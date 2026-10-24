@@ -62,6 +62,10 @@ guide is not proof of the installed state or behaviour of firmware
 | Telephone, SMS/MMS, voicemail, cellular widgets | Prune | Cellular service is out of scope. Preserve emergency/recovery behaviour; remove distractions only through reversible UI changes first. |
 | Nokia/Ovi account, Store, Ovi Music, Social, obsolete support links | Prune / Bridge selectively | Assume nothing from age alone. Test only if a native workflow remains valuable; otherwise hide dead entry points and prevent connection churn. |
 
+## Active gate: reversible application and widget pruning
+
+The first app decluttering pass has been scoped to Belle's existing menu folders, widget removal and **read-only** package-registry triage. A protected system cleanup or uninstall is not authorised without per-package backup and rollback evidence. See [PRUNE-PHASE1-2026-10-24.md](PRUNE-PHASE1-2026-10-24.md). No handset changes have been performed as part of this plan.
+
 ## Completed gate: native UI census
 
 The menu, settings families, installed-package list, installation policy,

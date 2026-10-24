@@ -1,6 +1,6 @@
 # Nokia E7: native-first modernisation roadmap
 
-Updated: 2026-10-10
+Updated: 2026-10-24
 
 ## Desired end state
 
@@ -13,9 +13,9 @@ The existing `Retain / Repair / Bridge / Prune` matrix in `NATIVE-RESTORATION.md
 | Priority | Capability | Handset-visible acceptance condition | Safety prerequisite |
 | --- | --- | --- | --- |
 | P0: ongoing | Recovery and measurable baseline | Verified, separately stored backups; early-post-boot/settled process and RAM snapshots; documented stock image/recovery path before flashing | Keep `Z:` archive distinct from writable `C:` state, and avoid unreviewed startup edits |
-| P1: first real modern feature | Trustworthy cable-free file transfer | From E7, transfer a bounded test file to Debian and verify size + SHA-256; compare with existing MTP path | Restrict sources, avoid private files, test disconnect/retry, preserve existing E7 contents |
+| P1: physically accepted | Trustworthy cable-free file transfer | Bounded synthetic E7-to-Debian transfer and checksums passed | Restrict sources, avoid private files, test disconnect/retry, preserve existing E7 contents |
 | P1 | LAN bridge security | Pairing and confidentiality model suitable for transferring non-public user data, with device-side constraints documented | Existing v0.4 HMAC transport authenticates but does **not encrypt**; keep current channel on trusted LAN and use synthetic test files initially |
-| P2 | Modern host-service gateway | One specific native E7 workflow can access a current service via a narrow, modern-TLS-capable host adapter | No storing external account secrets on public GitHub or exposing an unauthenticated LAN proxy |
+| P2: host candidate | Modern host-service gateway | E7 browser displays current public news delivered by a narrowly scoped HTTPS-fetching Sanctuary host gateway, including after screen lock | No account secrets, arbitrary forward proxy, public HTTP listener, or untested handset claims |
 | P2 | Contacts/calendar/notes continuity | Round-trip a disposable local fixture through a modern exchange format without destroying existing data | Reversible import/export; backup and comparison first |
 | P3 | Maps and positioning | Offline map content visibly works on the native E7; location behaviour tested separately | Never repeat the failed runtime no-SIM General/RF-on forcing; avoid replacing core location libraries blindly |
 | P3 | Native email / messaging | A narrowly scoped modern service works through a native client or a reviewed bridge | Constrain authentication and transport, verify privacy and data handling |
@@ -25,7 +25,7 @@ The existing `Retain / Repair / Bridge / Prune` matrix in `NATIVE-RESTORATION.md
 ## What has already been demonstrated
 
 - Native media, camera, several offline productivity apps, Wi-Fi and browser-local content are usable, as described in `PROJECT-STATE.md` and `NATIVE-RESTORATION.md`.
-- E7 Bridge v0.4.0 compiled and installed on physical Nokia E7 (2026-10-10). Authenticated commands, read-only RAM/power telemetry, process snapshots, `diff` and `record` passed. Native music, Wi-Fi and standby still worked after exit.
+- E7 Bridge phone agent v0.8.0 and Sanctuary host controller v0.8.1 have passed their positive-path physical acceptance, including native SIS registry queries, bounded E:/ file transfer and verified host-side administrative write batches. Native music, Wi-Fi and standby were preserved during those checks. The HMAC-authenticated bridge is **not encrypted** and remains restricted to a trusted LAN.
 - The 173-process census and approximately 245 MiB reported RAM total describe this E7 session, not a guaranteed platform baseline or proof of wasted services.
 - A private `Z:` archive and a firmware-resource audit exist. A recovered `Z:` filesystem is **not** proof of full stock flash recoverability or a backup of writable phone memory.
 
@@ -33,7 +33,12 @@ The existing `Retain / Repair / Bridge / Prune` matrix in `NATIVE-RESTORATION.md
 
 Use the existing v0.4 application for an early post-boot capture, a settled capture ~3 minutes later, and optionally a normal-use capture. The read-only offline comparison utility is `bridge/e7-bridge/tools/stage_compare.py` and the protocol is `bridge/e7-bridge/BOOT-STAGES.md`.
 
-If the baseline is usable, the next functional engineering slice should be **verified E7-to-Debian transfer of a deliberately non-private test file**, with byte/hash comparison and explicit size/path limits. Do not start by adding general-purpose remote writes or changing firmware.
+The bounded E7-to-Debian Field Deck transfer and E7 v0.8.0 / host v0.8.1 write-batch positive path have subsequently passed physical acceptance. The next service-facing milestone is **a practical modern HTTPS-to-E7 workflow**, initially a read-only BBC News RSS gateway hosted on Sanctuary and displayed in the stock E7 browser. The host candidate has offline tests but **has not yet passed on-device acceptance**. It uses fixed upstream feeds, not an arbitrary web proxy. Do not expose unencrypted local services to the public internet.
+
+
+## WLAN power saving: provisional field observation (2026-10-24)
+
+The E7 operator reports that disabling WLAN-specific power saving **appears to have stopped unexpected Wi-Fi dropouts**. This is a single user observation, not an independently verified root cause or a long-duration acceptance result. Nokia's stock WLAN implementation distinguishes the `WlanPowerMode` control from inactivity/connection-lifetime timeouts. The preserved Z: configuration includes a one-second WLAN last-session-closed timeout; we must not conflate ordinary idle disconnects with a UI Wi-Fi toggle actually moving to Off. A longer lock/unlock plus practical browser-reload test remains pending. See [WLAN-POWER-SAVING-OBSERVATION-2026-10-24.md](WLAN-POWER-SAVING-OBSERVATION-2026-10-24.md).
 
 ## Non-goals and open questions
 
